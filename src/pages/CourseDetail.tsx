@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -701,4 +702,18 @@ const CourseDetail = () => {
                     </div>
                     
                     <div className="mt-6">
-                      <Button variant
+                      <Button variant="outline" className="w-full">Ver mais avaliações</Button>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div>
+          </div>
+        </div>
+      </main>
+      <Footer />
+    </div>
+  );
+};
+
+export default CourseDetail;
