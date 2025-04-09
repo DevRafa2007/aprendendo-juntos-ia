@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -11,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   User, CreditCard, Bell, Lock, Upload, CheckCircle, 
   Folder, Award, Settings, BookOpen, Bookmark, Clock, Calendar, 
-  Pencil, Heart, FileCheck, BarChart, ChevronRight
+  Pencil, Heart, FileCheck, BarChart, ChevronRight, FileDown, PlusCircle
 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
@@ -477,7 +476,7 @@ const Profile = () => {
                                 Ver Certificado
                               </Button>
                               <Button variant="outline" size="icon">
-                                <Download className="h-4 w-4" />
+                                <FileDown className="h-4 w-4" />
                               </Button>
                             </div>
                           </CardContent>
@@ -642,7 +641,7 @@ const Profile = () => {
                           </div>
                           
                           <Button>
-                            <Plus className="h-4 w-4 mr-2" />
+                            <PlusCircle className="h-4 w-4 mr-2" />
                             Adicionar Método de Pagamento
                           </Button>
                           

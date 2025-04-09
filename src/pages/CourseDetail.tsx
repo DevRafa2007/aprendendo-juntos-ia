@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -13,7 +12,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { 
   Play, Clock, Calendar, CheckCircle, Star, ThumbsUp, Award, 
   BarChart, Download, Share2, Heart, ShoppingCart, Video, 
-  FileText, FileCheck, Users, MessageSquare, Certificate
+  FileText, FileCheck, Users, MessageSquare, Scroll
 } from 'lucide-react';
 
 const CourseDetail = () => {
@@ -483,7 +482,7 @@ const CourseDetail = () => {
                     <h2 className="text-2xl font-bold mb-4">Certificado</h2>
                     <div className="flex items-center gap-4 p-4 border rounded-lg">
                       <div className="w-12 h-12 bg-brand-blue/10 rounded-full flex items-center justify-center text-brand-blue">
-                        <Certificate className="h-6 w-6" />
+                        <Scroll className="h-6 w-6" />
                       </div>
                       <div>
                         <h3 className="font-medium mb-1">Certificado de Conclusão</h3>
@@ -702,119 +701,4 @@ const CourseDetail = () => {
                     </div>
                     
                     <div className="mt-6">
-                      <Button variant="outline" className="w-full">Carregar mais avaliações</Button>
-                    </div>
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </div>
-            
-            {/* Coluna lateral com informações do curso (apenas para desktop) */}
-            <div className="hidden lg:block">
-              <div className="sticky top-24">
-                <Card className="mb-6">
-                  <CardContent className="p-6">
-                    <h3 className="font-bold text-lg mb-4">Estatísticas do curso</h3>
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-brand-blue/10 flex items-center justify-center text-brand-blue">
-                          <Users className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Alunos matriculados</p>
-                          <p className="font-medium">{course.studentsCount}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-brand-green/10 flex items-center justify-center text-brand-green">
-                          <Video className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Total de aulas</p>
-                          <p className="font-medium">
-                            {course.modules.reduce((acc, module) => acc + module.lessonsCount, 0)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-brand-yellow/10 flex items-center justify-center text-brand-yellow">
-                          <Clock className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Duração total</p>
-                          <p className="font-medium">{course.duration}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
-                          <Award className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Nível</p>
-                          <p className="font-medium">{course.level}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
-                          <BarChart className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Última atualização</p>
-                          <p className="font-medium">{course.lastUpdated}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardContent className="p-6">
-                    <h3 className="font-bold text-lg mb-4">Inicie sua jornada</h3>
-                    {isEnrolled ? (
-                      <Button className="w-full gap-2" size="lg">
-                        <Play className="h-5 w-5" />
-                        Continuar Curso
-                      </Button>
-                    ) : (
-                      <Button 
-                        className="w-full gap-2 mb-3" 
-                        size="lg"
-                        onClick={() => setIsEnrolled(true)}
-                      >
-                        <ShoppingCart className="h-5 w-5" />
-                        {course.isFree ? 'Inscrever-se Gratuitamente' : 'Comprar Agora'}
-                      </Button>
-                    )}
-                    
-                    {!isEnrolled && !course.isFree && (
-                      <p className="text-xs text-center text-muted-foreground mb-4">
-                        Garantia de 30 dias ou seu dinheiro de volta
-                      </p>
-                    )}
-                    
-                    <div className="border-t pt-4">
-                      <p className="text-sm text-muted-foreground mb-2">Compartilhe este curso</p>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm" className="flex-1">
-                          <Share2 className="h-4 w-4 mr-2" />
-                          Compartilhar
-                        </Button>
-                        <Button variant="outline" size="sm" className="flex-1">
-                          <Download className="h-4 w-4 mr-2" />
-                          Salvar
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          </div>
-        </div>
-      </main>
-      <Footer />
-    </div>
-  );
-};
-
-export default CourseDetail;
+                      <Button variant
