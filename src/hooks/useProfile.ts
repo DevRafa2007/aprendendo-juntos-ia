@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface ProfileType {
   id: string;
@@ -17,6 +18,7 @@ export function useProfile(userId?: string) {
   const [profile, setProfile] = useState<ProfileType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     const targetUserId = userId || user?.id;
@@ -55,6 +57,11 @@ export function useProfile(userId?: string) {
     const targetUserId = userId || user?.id;
     
     if (!targetUserId) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Usuário não autenticado"
+      });
       throw new Error('Usuário não autenticado');
     }
 
@@ -67,10 +74,19 @@ export function useProfile(userId?: string) {
         .single();
 
       if (error) {
+        toast({
+          variant: "destructive",
+          title: "Erro ao atualizar perfil",
+          description: error.message
+        });
         throw error;
       }
 
       setProfile(data);
+      toast({
+        title: "Perfil atualizado",
+        description: "Seu perfil foi atualizado com sucesso!"
+      });
       return { data, error: null };
     } catch (error: any) {
       console.error('Erro ao atualizar perfil:', error);

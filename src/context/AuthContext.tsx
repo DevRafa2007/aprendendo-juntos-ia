@@ -4,7 +4,7 @@ import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
-interface ProfileType {
+export interface ProfileType {
   id: string;
   name: string | null;
   email: string | null;

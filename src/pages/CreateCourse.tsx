@@ -1,5 +1,9 @@
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -19,40 +23,195 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { CourseFormData, useCourses } from '@/hooks/useCourses';
+import { useAuth } from '@/context/AuthContext';
+import { useProfile } from '@/hooks/useProfile';
+import { supabase } from '@/integrations/supabase/client';
+
+// Schema de validação para o formulário de curso
+const courseSchema = z.object({
+  title: z.string().min(5, { message: 'O título deve ter pelo menos 5 caracteres' }),
+  description: z.string().min(20, { message: 'A descrição deve ter pelo menos 20 caracteres' }),
+  category: z.string({ required_error: 'Selecione uma categoria' }),
+  duration: z.number().min(1, { message: 'A duração deve ser pelo menos 1 hora' }).or(z.string().transform(val => parseInt(val))),
+  level: z.string({ required_error: 'Selecione um nível' }),
+  price: z.number().min(0, { message: 'O preço não pode ser negativo' }).or(z.string().transform(val => parseInt(val))),
+  image_url: z.string().optional(),
+});
+
+type CourseFormValues = z.infer<typeof courseSchema>;
 
 const CreateCourse = () => {
+  const { user } = useAuth();
+  const { profile } = useProfile();
+  const { createCourse, isLoading } = useCourses();
   const [activeTab, setActiveTab] = useState('informacoes');
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-
-  // Preços dos planos
-  const planPrices = {
-    basic: 'R$ 40,99',
-    standard: 'R$ 149,99',
-    premium: 'R$ 289,90',
-  };
+  const [modules, setModules] = useState([
+    { id: 1, title: 'Introdução ao Curso', contents: [
+      { id: 1, type: 'video', title: 'Boas-vindas e Visão Geral' },
+      { id: 2, type: 'text', title: 'Material de Apoio' },
+      { id: 3, type: 'video', title: 'Como Aproveitar ao Máximo o Curso' },
+    ]},
+    { id: 2, title: 'Conceitos Fundamentais', contents: [
+      { id: 1, type: 'video', title: 'Fundamentos Teóricos' },
+      { id: 2, type: 'video', title: 'Aplicações Práticas' },
+      { id: 3, type: 'text', title: 'Leitura Complementar' },
+      { id: 4, type: 'video', title: 'Estudo de Caso' },
+      { id: 5, type: 'quiz', title: 'Quiz de Fixação' },
+    ]}
+  ]);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const navigate = useNavigate();
+  
+  const form = useForm<CourseFormValues>({
+    resolver: zodResolver(courseSchema),
+    defaultValues: {
+      title: '',
+      description: '',
+      category: '',
+      duration: 0,
+      level: 'iniciante',
+      price: 0,
+      image_url: '',
+    },
+  });
 
   // Funções de manipulação
   const handleAddModule = () => {
-    // Lógica para adicionar um novo módulo ao curso
-    console.log('Adicionando novo módulo');
+    const newId = modules.length > 0 ? Math.max(...modules.map(m => m.id)) + 1 : 1;
+    
+    setModules([
+      ...modules,
+      { id: newId, title: `Novo Módulo ${newId}`, contents: [] }
+    ]);
+  };
+
+  const handleUpdateModuleTitle = (moduleId: number, newTitle: string) => {
+    setModules(modules.map(module => 
+      module.id === moduleId ? { ...module, title: newTitle } : module
+    ));
   };
 
   const handleAddContent = (moduleIndex: number, contentType: 'video' | 'text' | 'quiz') => {
-    // Lógica para adicionar conteúdo a um módulo
-    console.log(`Adicionando conteúdo do tipo ${contentType} ao módulo ${moduleIndex}`);
+    const module = modules[moduleIndex];
+    if (!module) return;
+    
+    const newId = module.contents.length > 0 
+      ? Math.max(...module.contents.map(c => c.id)) + 1 
+      : 1;
+    
+    const contentTitles = {
+      video: 'Novo Vídeo',
+      text: 'Novo Material de Texto',
+      quiz: 'Novo Quiz',
+    };
+    
+    const updatedModules = [...modules];
+    updatedModules[moduleIndex].contents.push({
+      id: newId,
+      type: contentType,
+      title: contentTitles[contentType]
+    });
+    
+    setModules(updatedModules);
+  };
+
+  const handleDeleteContent = (moduleIndex: number, contentId: number) => {
+    const updatedModules = [...modules];
+    const moduleContents = updatedModules[moduleIndex].contents;
+    
+    updatedModules[moduleIndex].contents = moduleContents.filter(
+      content => content.id !== contentId
+    );
+    
+    setModules(updatedModules);
   };
 
   const handlePlanSelect = (plan: string) => {
     setSelectedPlan(plan);
   };
 
-  const handlePublishCourse = () => {
-    // Lógica para publicar o curso
-    console.log('Publicando curso');
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    setImageFile(file);
+    const previewUrl = URL.createObjectURL(file);
+    setImagePreview(previewUrl);
+  };
+
+  const uploadImage = async (): Promise<string | null> => {
+    if (!imageFile || !user) return null;
+    
+    try {
+      setUploading(true);
+      
+      const fileExt = imageFile.name.split('.').pop();
+      const fileName = `${user.id}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `course-images/${fileName}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('course-images')
+        .upload(filePath, imageFile);
+        
+      if (uploadError) throw uploadError;
+      
+      const { data } = supabase.storage
+        .from('course-images')
+        .getPublicUrl(filePath);
+        
+      return data.publicUrl;
+    } catch (error) {
+      console.error('Erro ao fazer upload da imagem:', error);
+      return null;
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSubmit = async (values: CourseFormValues) => {
+    try {
+      let imageUrl = values.image_url;
+      
+      if (imageFile) {
+        const uploadedUrl = await uploadImage();
+        if (uploadedUrl) {
+          imageUrl = uploadedUrl;
+        }
+      }
+      
+      // Preparar dados do curso para envio
+      const courseData: CourseFormData = {
+        ...values,
+        image_url: imageUrl || null,
+      };
+      
+      // Criar curso no banco de dados
+      const { data, error } = await createCourse(courseData);
+      
+      if (error) throw error;
+      
+      // Redirecionar para a página do curso
+      if (data?.id) {
+        navigate(`/curso/${data.id}`);
+      }
+    } catch (error) {
+      console.error('Erro ao publicar curso:', error);
+    }
   };
 
   // Componente para exibir um item de conteúdo do curso
-  const ContentItem = ({ type, title, index }: { type: 'video' | 'text' | 'quiz', title: string, index: number }) => {
+  const ContentItem = ({ type, title, index, moduleIndex, contentId }: { 
+    type: 'video' | 'text' | 'quiz',
+    title: string, 
+    index: number,
+    moduleIndex: number,
+    contentId: number
+  }) => {
     const icons = {
       video: <Video className="h-4 w-4" />,
       text: <FileText className="h-4 w-4" />,
@@ -71,7 +230,12 @@ const CreateCourse = () => {
           </div>
         </div>
         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button variant="ghost" size="icon" className="h-8 w-8">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8"
+            onClick={() => handleDeleteContent(moduleIndex, contentId)}
+          >
             <Trash2 className="h-4 w-4 text-destructive" />
           </Button>
         </div>
@@ -131,167 +295,207 @@ const CreateCourse = () => {
                 <TabsContent value="informacoes" className="space-y-6">
                   <Card>
                     <CardContent className="pt-6">
-                      <div className="mb-6">
-                        <Label htmlFor="course-title" className="mb-2 block">
-                          Título do Curso*
-                        </Label>
-                        <Input 
-                          id="course-title" 
-                          placeholder="Ex: Marketing Digital para Iniciantes"
-                          className="mb-1"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Escolha um título claro e atrativo que descreva bem o conteúdo do curso.
-                        </p>
-                      </div>
+                      <Form {...form}>
+                        <form className="space-y-6">
+                          <FormField
+                            control={form.control}
+                            name="title"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Título do Curso*</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    placeholder="Ex: Marketing Digital para Iniciantes" 
+                                    {...field} 
+                                  />
+                                </FormControl>
+                                <FormDescription>
+                                  Escolha um título claro e atrativo que descreva bem o conteúdo do curso.
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
 
-                      <div className="mb-6">
-                        <Label htmlFor="course-subtitle" className="mb-2 block">
-                          Subtítulo
-                        </Label>
-                        <Input 
-                          id="course-subtitle" 
-                          placeholder="Ex: Aprenda a criar estratégias eficientes para sua presença online"
-                          className="mb-1"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Um complemento ao título que detalha um pouco mais o que o aluno irá aprender.
-                        </p>
-                      </div>
+                          <FormField
+                            control={form.control}
+                            name="description"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Descrição do Curso*</FormLabel>
+                                <FormControl>
+                                  <Textarea 
+                                    placeholder="Descreva detalhadamente o que os alunos aprenderão no seu curso..."
+                                    className="min-h-32"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormDescription>
+                                  Seja específico sobre o que será abordado, os objetivos de aprendizado e para quem o curso é indicado.
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
 
-                      <div className="mb-6">
-                        <Label htmlFor="course-description" className="mb-2 block">
-                          Descrição do Curso*
-                        </Label>
-                        <Textarea 
-                          id="course-description" 
-                          placeholder="Descreva detalhadamente o que os alunos aprenderão no seu curso..."
-                          className="min-h-32 mb-1"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Seja específico sobre o que será abordado, os objetivos de aprendizado e para quem o curso é indicado.
-                        </p>
-                      </div>
+                          <FormField
+                            control={form.control}
+                            name="category"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Categoria Principal*</FormLabel>
+                                <Select 
+                                  onValueChange={field.onChange}
+                                  defaultValue={field.value}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Selecione uma categoria" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="tecnologia">Tecnologia</SelectItem>
+                                    <SelectItem value="negocios">Negócios</SelectItem>
+                                    <SelectItem value="marketing">Marketing</SelectItem>
+                                    <SelectItem value="design">Design</SelectItem>
+                                    <SelectItem value="educacao">Educação</SelectItem>
+                                    <SelectItem value="saude">Saúde e Bem-Estar</SelectItem>
+                                    <SelectItem value="desenvolvimento-pessoal">Desenvolvimento Pessoal</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
 
-                      <div className="mb-6">
-                        <Label className="mb-2 block">
-                          Categoria Principal*
-                        </Label>
-                        <Select>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione uma categoria" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="tecnologia">Tecnologia</SelectItem>
-                            <SelectItem value="negocios">Negócios</SelectItem>
-                            <SelectItem value="marketing">Marketing</SelectItem>
-                            <SelectItem value="design">Design</SelectItem>
-                            <SelectItem value="educacao">Educação</SelectItem>
-                            <SelectItem value="saude">Saúde e Bem-Estar</SelectItem>
-                            <SelectItem value="desenvolvimento-pessoal">Desenvolvimento Pessoal</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="mb-6">
-                        <Label className="mb-2 block">Imagem de Capa do Curso*</Label>
-                        <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-                          <div className="mx-auto w-32 h-32 bg-muted mb-4 rounded-lg flex items-center justify-center">
-                            <Image className="w-12 h-12 text-muted-foreground" />
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-3">
-                            Arraste uma imagem para cá ou clique para fazer upload
-                          </p>
-                          <Button>
-                            <Upload className="h-4 w-4 mr-2" />
-                            Escolher Imagem
-                          </Button>
-                          <p className="text-xs text-muted-foreground mt-3">
-                            Recomendamos imagens de pelo menos 1280x720 pixels, no formato JPG ou PNG.
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="mb-6">
-                        <Label className="mb-2 block">Duração Estimada do Curso*</Label>
-                        <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <Label htmlFor="course-hours" className="text-sm block mb-1">
-                              Horas Totais
-                            </Label>
-                            <div className="flex items-center">
-                              <Input
-                                id="course-hours"
-                                type="number"
-                                placeholder="0"
-                                min="1"
+                            <FormLabel className="mb-2 block">Imagem de Capa do Curso*</FormLabel>
+                            <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+                              {imagePreview ? (
+                                <div className="mb-4">
+                                  <img
+                                    src={imagePreview}
+                                    alt="Preview"
+                                    className="mx-auto max-h-40 object-cover rounded-lg"
+                                  />
+                                </div>
+                              ) : (
+                                <div className="mx-auto w-32 h-32 bg-muted mb-4 rounded-lg flex items-center justify-center">
+                                  <Image className="w-12 h-12 text-muted-foreground" />
+                                </div>
+                              )}
+                              <p className="text-sm text-muted-foreground mb-3">
+                                Arraste uma imagem para cá ou clique para fazer upload
+                              </p>
+                              <Button
+                                type="button"
+                                onClick={() => document.getElementById('course-image')?.click()}
+                                disabled={uploading}
+                              >
+                                <Upload className="h-4 w-4 mr-2" />
+                                {uploading ? 'Enviando...' : 'Escolher Imagem'}
+                              </Button>
+                              <input
+                                type="file"
+                                id="course-image"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={handleImageChange}
+                                disabled={uploading}
                               />
-                              <span className="ml-2 text-muted-foreground">horas</span>
+                              <p className="text-xs text-muted-foreground mt-3">
+                                Recomendamos imagens de pelo menos 1280x720 pixels, no formato JPG ou PNG.
+                              </p>
                             </div>
                           </div>
-                          <div>
-                            <Label htmlFor="course-completion" className="text-sm block mb-1">
-                              Tempo para Conclusão
-                            </Label>
-                            <div className="flex items-center gap-2">
-                              <Input
-                                id="course-completion"
-                                type="number"
-                                placeholder="30"
-                                min="1"
-                              />
-                              <Select defaultValue="dias">
-                                <SelectTrigger className="w-24">
-                                  <SelectValue placeholder="Dias" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="dias">Dias</SelectItem>
-                                  <SelectItem value="semanas">Semanas</SelectItem>
-                                  <SelectItem value="meses">Meses</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Estas informações ajudam os alunos a planejarem seus estudos.
-                        </p>
-                      </div>
 
-                      <div className="mb-6">
-                        <Label className="mb-2 block">Nível do Curso*</Label>
-                        <RadioGroup defaultValue="iniciante">
-                          <div className="flex flex-col space-y-2">
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="iniciante" id="nivel-iniciante" />
-                              <Label htmlFor="nivel-iniciante">Iniciante</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="intermediario" id="nivel-intermediario" />
-                              <Label htmlFor="nivel-intermediario">Intermediário</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="avancado" id="nivel-avancado" />
-                              <Label htmlFor="nivel-avancado">Avançado</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="todos" id="nivel-todos" />
-                              <Label htmlFor="nivel-todos">Todos os níveis</Label>
-                            </div>
-                          </div>
-                        </RadioGroup>
-                      </div>
+                          <FormField
+                            control={form.control}
+                            name="duration"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Duração Estimada do Curso (horas)*</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    min="1"
+                                    placeholder="Ex: 10"
+                                    {...field}
+                                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                                  />
+                                </FormControl>
+                                <FormDescription>
+                                  Esta informação ajuda os alunos a planejarem seus estudos.
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
 
-                      <div className="flex justify-end">
-                        <Button 
-                          size="lg" 
-                          onClick={() => setActiveTab('conteudo')}
-                          className="gap-2"
-                        >
-                          Próxima Etapa
-                          <ArrowRight className="h-4 w-4" />
-                        </Button>
-                      </div>
+                          <FormField
+                            control={form.control}
+                            name="level"
+                            render={({ field }) => (
+                              <FormItem className="space-y-3">
+                                <FormLabel>Nível do Curso*</FormLabel>
+                                <FormControl>
+                                  <RadioGroup
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                    className="flex flex-col space-y-1"
+                                  >
+                                    <FormItem className="flex items-center space-x-3 space-y-0">
+                                      <FormControl>
+                                        <RadioGroupItem value="iniciante" />
+                                      </FormControl>
+                                      <FormLabel className="font-normal">
+                                        Iniciante
+                                      </FormLabel>
+                                    </FormItem>
+                                    <FormItem className="flex items-center space-x-3 space-y-0">
+                                      <FormControl>
+                                        <RadioGroupItem value="intermediario" />
+                                      </FormControl>
+                                      <FormLabel className="font-normal">
+                                        Intermediário
+                                      </FormLabel>
+                                    </FormItem>
+                                    <FormItem className="flex items-center space-x-3 space-y-0">
+                                      <FormControl>
+                                        <RadioGroupItem value="avancado" />
+                                      </FormControl>
+                                      <FormLabel className="font-normal">
+                                        Avançado
+                                      </FormLabel>
+                                    </FormItem>
+                                    <FormItem className="flex items-center space-x-3 space-y-0">
+                                      <FormControl>
+                                        <RadioGroupItem value="todos" />
+                                      </FormControl>
+                                      <FormLabel className="font-normal">
+                                        Todos os níveis
+                                      </FormLabel>
+                                    </FormItem>
+                                  </RadioGroup>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <div className="flex justify-end">
+                            <Button 
+                              type="button"
+                              size="lg" 
+                              onClick={() => setActiveTab('conteudo')}
+                              className="gap-2"
+                            >
+                              Próxima Etapa
+                              <ArrowRight className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </form>
+                      </Form>
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -317,79 +521,62 @@ const CreateCourse = () => {
                       </Alert>
 
                       <Accordion type="single" collapsible className="mb-6">
-                        <AccordionItem value="module-1">
-                          <AccordionTrigger className="hover:no-underline">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-brand-blue text-white rounded-full flex items-center justify-center">
-                                1
+                        {modules.map((module, moduleIndex) => (
+                          <AccordionItem key={module.id} value={`module-${module.id}`}>
+                            <AccordionTrigger className="hover:no-underline">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-brand-blue text-white rounded-full flex items-center justify-center">
+                                  {moduleIndex + 1}
+                                </div>
+                                <div className="text-left">
+                                  <p className="font-medium">{module.title}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {module.contents.length} {module.contents.length === 1 ? 'aula' : 'aulas'}
+                                  </p>
+                                </div>
                               </div>
-                              <div className="text-left">
-                                <p className="font-medium">Introdução ao Curso</p>
-                                <p className="text-xs text-muted-foreground">3 aulas • 15 minutos</p>
-                              </div>
-                            </div>
-                          </AccordionTrigger>
-                          <AccordionContent>
-                            <div className="pt-4 pb-2 space-y-4">
-                              <ContentItem type="video" title="Boas-vindas e Visão Geral" index={1} />
-                              <ContentItem type="text" title="Material de Apoio" index={2} />
-                              <ContentItem type="video" title="Como Aproveitar ao Máximo o Curso" index={3} />
+                            </AccordionTrigger>
+                            <AccordionContent>
+                              <div className="pt-4 pb-2 space-y-4">
+                                <div className="mb-4">
+                                  <Label htmlFor={`module-title-${module.id}`}>Título do Módulo</Label>
+                                  <Input
+                                    id={`module-title-${module.id}`}
+                                    value={module.title}
+                                    onChange={(e) => handleUpdateModuleTitle(module.id, e.target.value)}
+                                    className="mt-1"
+                                  />
+                                </div>
+                                
+                                {module.contents.map((content, contentIndex) => (
+                                  <ContentItem
+                                    key={content.id}
+                                    type={content.type as 'video' | 'text' | 'quiz'}
+                                    title={content.title}
+                                    index={contentIndex + 1}
+                                    moduleIndex={moduleIndex}
+                                    contentId={content.id}
+                                  />
+                                ))}
 
-                              <div className="flex flex-wrap gap-2 mt-4">
-                                <Button variant="outline" size="sm" onClick={() => handleAddContent(0, 'video')}>
-                                  <Video className="h-4 w-4 mr-2" />
-                                  Adicionar Vídeo
-                                </Button>
-                                <Button variant="outline" size="sm" onClick={() => handleAddContent(0, 'text')}>
-                                  <FileText className="h-4 w-4 mr-2" />
-                                  Adicionar Texto
-                                </Button>
-                                <Button variant="outline" size="sm" onClick={() => handleAddContent(0, 'quiz')}>
-                                  <FileCheck className="h-4 w-4 mr-2" />
-                                  Adicionar Quiz
-                                </Button>
+                                <div className="flex flex-wrap gap-2 mt-4">
+                                  <Button variant="outline" size="sm" onClick={() => handleAddContent(moduleIndex, 'video')}>
+                                    <Video className="h-4 w-4 mr-2" />
+                                    Adicionar Vídeo
+                                  </Button>
+                                  <Button variant="outline" size="sm" onClick={() => handleAddContent(moduleIndex, 'text')}>
+                                    <FileText className="h-4 w-4 mr-2" />
+                                    Adicionar Texto
+                                  </Button>
+                                  <Button variant="outline" size="sm" onClick={() => handleAddContent(moduleIndex, 'quiz')}>
+                                    <FileCheck className="h-4 w-4 mr-2" />
+                                    Adicionar Quiz
+                                  </Button>
+                                </div>
                               </div>
-                            </div>
-                          </AccordionContent>
-                        </AccordionItem>
-
-                        <AccordionItem value="module-2">
-                          <AccordionTrigger className="hover:no-underline">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-brand-blue text-white rounded-full flex items-center justify-center">
-                                2
-                              </div>
-                              <div className="text-left">
-                                <p className="font-medium">Conceitos Fundamentais</p>
-                                <p className="text-xs text-muted-foreground">5 aulas • 45 minutos</p>
-                              </div>
-                            </div>
-                          </AccordionTrigger>
-                          <AccordionContent>
-                            <div className="pt-4 pb-2 space-y-4">
-                              <ContentItem type="video" title="Fundamentos Teóricos" index={1} />
-                              <ContentItem type="video" title="Aplicações Práticas" index={2} />
-                              <ContentItem type="text" title="Leitura Complementar" index={3} />
-                              <ContentItem type="video" title="Estudo de Caso" index={4} />
-                              <ContentItem type="quiz" title="Quiz de Fixação" index={5} />
-
-                              <div className="flex flex-wrap gap-2 mt-4">
-                                <Button variant="outline" size="sm" onClick={() => handleAddContent(1, 'video')}>
-                                  <Video className="h-4 w-4 mr-2" />
-                                  Adicionar Vídeo
-                                </Button>
-                                <Button variant="outline" size="sm" onClick={() => handleAddContent(1, 'text')}>
-                                  <FileText className="h-4 w-4 mr-2" />
-                                  Adicionar Texto
-                                </Button>
-                                <Button variant="outline" size="sm" onClick={() => handleAddContent(1, 'quiz')}>
-                                  <FileCheck className="h-4 w-4 mr-2" />
-                                  Adicionar Quiz
-                                </Button>
-                              </div>
-                            </div>
-                          </AccordionContent>
-                        </AccordionItem>
+                            </AccordionContent>
+                          </AccordionItem>
+                        ))}
                       </Accordion>
 
                       <div className="flex justify-between">
@@ -418,6 +605,30 @@ const CreateCourse = () => {
                       <h2 className="text-xl font-bold mb-6">Preços e Configurações de Publicação</h2>
 
                       <div className="space-y-6 mb-8">
+                        <FormField
+                          control={form.control}
+                          name="price"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Preço do Curso (R$)*</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  placeholder="Ex: 49.90"
+                                  {...field}
+                                  onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                Defina o preço do seu curso em reais. Use 0 para cursos gratuitos.
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
                         <div>
                           <Label className="mb-3 block">Escolha um Plano de Preço*</Label>
                           
@@ -433,7 +644,7 @@ const CreateCourse = () => {
                             >
                               <div className="bg-brand-blue/10 p-4 text-center border-b border-border">
                                 <h3 className="font-bold">Plano Básico</h3>
-                                <p className="text-2xl font-bold mt-2 text-brand-blue">{planPrices.basic}</p>
+                                <p className="text-2xl font-bold mt-2 text-brand-blue">R$ 40,99</p>
                                 <p className="text-xs text-muted-foreground mt-1">até 50 alunos</p>
                               </div>
                               <div className="p-4">
@@ -468,7 +679,7 @@ const CreateCourse = () => {
                                   POPULAR
                                 </div>
                                 <h3 className="font-bold">Plano Standard</h3>
-                                <p className="text-2xl font-bold mt-2 text-brand-blue">{planPrices.standard}</p>
+                                <p className="text-2xl font-bold mt-2 text-brand-blue">R$ 149,99</p>
                                 <p className="text-xs text-muted-foreground mt-1">até 500 alunos</p>
                               </div>
                               <div className="p-4">
@@ -504,7 +715,7 @@ const CreateCourse = () => {
                             >
                               <div className="bg-brand-blue/10 p-4 text-center border-b border-border">
                                 <h3 className="font-bold">Plano Premium</h3>
-                                <p className="text-2xl font-bold mt-2 text-brand-blue">{planPrices.premium}</p>
+                                <p className="text-2xl font-bold mt-2 text-brand-blue">R$ 289,90</p>
                                 <p className="text-xs text-muted-foreground mt-1">alunos ilimitados</p>
                               </div>
                               <div className="p-4">
@@ -538,42 +749,6 @@ const CreateCourse = () => {
                             Os valores se referem ao preço total do curso que você receberá após as taxas da plataforma (15%).
                           </p>
                         </div>
-
-                        <div>
-                          <div className="flex items-center justify-between mb-3">
-                            <Label>Opções de Disponibilidade</Label>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <HelpCircle className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="w-64 text-xs">
-                                    Você pode escolher publicar seu curso imediatamente ou deixá-lo como rascunho para publicar posteriormente.
-                                  </p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </div>
-                          <RadioGroup defaultValue="publicar-agora">
-                            <div className="flex flex-col space-y-2">
-                              <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="publicar-agora" id="publicar-agora" />
-                                <Label htmlFor="publicar-agora">Publicar imediatamente</Label>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="salvar-rascunho" id="salvar-rascunho" />
-                                <Label htmlFor="salvar-rascunho">Salvar como rascunho</Label>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="programar-publicacao" id="programar-publicacao" />
-                                <Label htmlFor="programar-publicacao">Programar publicação</Label>
-                              </div>
-                            </div>
-                          </RadioGroup>
-                        </div>
                       </div>
 
                       <Alert className="mb-6" variant="destructive">
@@ -592,56 +767,15 @@ const CreateCourse = () => {
                           Voltar
                         </Button>
                         
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button size="lg" className="gap-2">
-                              Publicar Curso
-                              <ArrowRight className="h-4 w-4" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Confirmar Publicação</DialogTitle>
-                              <DialogDescription>
-                                Seu curso está pronto para ser publicado na plataforma Studying Place. Confira se todas as informações estão corretas.
-                              </DialogDescription>
-                            </DialogHeader>
-                            <div className="py-4">
-                              <div className="space-y-3">
-                                <div className="flex justify-between pb-2 border-b">
-                                  <span className="font-medium">Plano selecionado:</span>
-                                  <span className="font-bold text-brand-blue">
-                                    {selectedPlan === 'basic' && 'Plano Básico'}
-                                    {selectedPlan === 'standard' && 'Plano Standard'}
-                                    {selectedPlan === 'premium' && 'Plano Premium'}
-                                    {!selectedPlan && 'Nenhum plano selecionado'}
-                                  </span>
-                                </div>
-                                <div className="flex justify-between pb-2 border-b">
-                                  <span className="font-medium">Preço do curso:</span>
-                                  <span className="font-bold">
-                                    {selectedPlan === 'basic' && planPrices.basic}
-                                    {selectedPlan === 'standard' && planPrices.standard}
-                                    {selectedPlan === 'premium' && planPrices.premium}
-                                    {!selectedPlan && 'R$ 0,00'}
-                                  </span>
-                                </div>
-                                <div className="flex justify-between pb-2 border-b">
-                                  <span className="font-medium">Módulos criados:</span>
-                                  <span>2</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="font-medium">Conteúdos adicionados:</span>
-                                  <span>8</span>
-                                </div>
-                              </div>
-                            </div>
-                            <DialogFooter>
-                              <Button variant="outline">Cancelar</Button>
-                              <Button onClick={handlePublishCourse}>Confirmar Publicação</Button>
-                            </DialogFooter>
-                          </DialogContent>
-                        </Dialog>
+                        <Button 
+                          size="lg" 
+                          className="gap-2"
+                          onClick={form.handleSubmit(handleSubmit)}
+                          disabled={isLoading || uploading}
+                        >
+                          {isLoading ? 'Publicando...' : 'Publicar Curso'}
+                          <ArrowRight className="h-4 w-4" />
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -704,6 +838,18 @@ const CreateCourse = () => {
                         </div>
                       </li>
                     </ul>
+
+                    {profile && (
+                      <div className="mt-6 bg-muted p-4 rounded-lg">
+                        <h4 className="font-medium mb-2">Suas Informações</h4>
+                        <p className="text-sm mb-2">
+                          <span className="font-medium">Nome:</span> {profile.name}
+                        </p>
+                        <p className="text-sm">
+                          <span className="font-medium">Email:</span> {profile.email}
+                        </p>
+                      </div>
+                    )}
 
                     <div className="mt-6 bg-muted p-4 rounded-lg">
                       <h4 className="font-medium mb-2">Precisa de ajuda?</h4>

@@ -16,3 +16,15 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true,
   }
 });
+
+// Criar bucket para imagens de cursos
+(async () => {
+  const { data, error } = await supabase.storage.getBucket('course-images');
+  if (error && error.code === '404') {
+    // Bucket não existe, vamos criar
+    await supabase.storage.createBucket('course-images', {
+      public: true,
+      fileSizeLimit: 1024 * 1024 * 5 // 5MB
+    });
+  }
+})();
