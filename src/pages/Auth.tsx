@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -10,6 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import Logo from '@/components/Logo';
+import { useAuth } from '@/context/AuthContext';
 
 interface FormState {
   email: string;
@@ -24,6 +24,8 @@ const Auth = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const isLogin = location.pathname === '/login';
+  const { signIn, signUp } = useAuth();
+  
   const [formState, setFormState] = useState<FormState>({
     email: '',
     password: '',
@@ -98,7 +100,7 @@ const Auth = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validateForm()) {
@@ -107,12 +109,27 @@ const Auth = () => {
 
     setIsLoading(true);
     
-    // Simulação de uma requisição
-    setTimeout(() => {
+    try {
+      if (isLogin) {
+        // Login
+        const { error } = await signIn(formState.email, formState.password);
+        if (!error) {
+          navigate('/');
+        }
+      } else {
+        // Cadastro
+        const { error } = await signUp(formState.email, formState.password, { name: formState.name });
+        if (!error) {
+          // Em ambientes de desenvolvimento, o usuário pode ser automaticamente logado
+          // Em produção, geralmente é necessário confirmar o email
+          navigate('/login');
+        }
+      }
+    } catch (error) {
+      console.error('Erro de autenticação:', error);
+    } finally {
       setIsLoading(false);
-      // Redirecionar para a página inicial após autenticação bem-sucedida
-      navigate('/');
-    }, 1500);
+    }
   };
 
   return (

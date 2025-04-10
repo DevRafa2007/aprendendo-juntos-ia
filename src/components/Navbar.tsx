@@ -1,13 +1,29 @@
 
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { Search, Bell, MessageSquare, User, LogIn } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Search, Bell, MessageSquare, User, LogIn, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuLabel, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
 import Logo from './Logo';
+import { useAuth } from '@/context/AuthContext';
 
 const Navbar = () => {
-  // Simula um usuário não autenticado para este exemplo
-  const isAuthenticated = false;
+  const { user, profile, signOut } = useAuth();
+  const navigate = useNavigate();
+  const isAuthenticated = !!user;
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/');
+  };
 
   return (
     <nav className="border-b border-border bg-background sticky top-0 z-50">
@@ -21,9 +37,11 @@ const Navbar = () => {
             <Link to="/cursos" className="text-foreground hover:text-brand-blue transition-colors font-medium">
               Cursos
             </Link>
-            <Link to="/criar-curso" className="text-foreground hover:text-brand-blue transition-colors font-medium">
-              Criar Curso
-            </Link>
+            {isAuthenticated && (
+              <Link to="/criar-curso" className="text-foreground hover:text-brand-blue transition-colors font-medium">
+                Criar Curso
+              </Link>
+            )}
             <Link to="/suporte" className="text-foreground hover:text-brand-blue transition-colors font-medium">
               Suporte
             </Link>
@@ -48,11 +66,34 @@ const Navbar = () => {
               <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-brand-blue">
                 <MessageSquare className="h-5 w-5" />
               </Button>
-              <Link to="/perfil">
-                <div className="h-9 w-9 rounded-full bg-brand-blue text-white flex items-center justify-center">
-                  <User className="h-5 w-5" />
-                </div>
-              </Link>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+                    <div className="h-9 w-9 rounded-full bg-brand-blue text-white flex items-center justify-center">
+                      <User className="h-5 w-5" />
+                    </div>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>
+                    <div className="flex flex-col">
+                      <span className="font-semibold">{profile?.name || 'Usuário'}</span>
+                      <span className="text-xs text-muted-foreground truncate">{user?.email}</span>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/perfil" className="cursor-pointer">Meu Perfil</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/meus-cursos" className="cursor-pointer">Meus Cursos</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive cursor-pointer">
+                    <LogOut className="mr-2 h-4 w-4" /> Sair
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           ) : (
             <div className="flex items-center gap-3">
