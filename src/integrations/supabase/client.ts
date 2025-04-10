@@ -20,7 +20,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 // Criar bucket para imagens de cursos
 (async () => {
   const { data, error } = await supabase.storage.getBucket('course-images');
-  if (error && error.code === '404') {
+  if (error && error.message === 'The resource was not found') {
     // Bucket não existe, vamos criar
     await supabase.storage.createBucket('course-images', {
       public: true,

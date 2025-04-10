@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -37,7 +36,7 @@ const courseSchema = z.object({
   duration: z.number().min(1, { message: 'A duração deve ser pelo menos 1 hora' }).or(z.string().transform(val => parseInt(val))),
   level: z.string({ required_error: 'Selecione um nível' }),
   price: z.number().min(0, { message: 'O preço não pode ser negativo' }).or(z.string().transform(val => parseInt(val))),
-  image_url: z.string().optional(),
+  image_url: z.string().nullable().optional(),
 });
 
 type CourseFormValues = z.infer<typeof courseSchema>;
@@ -175,7 +174,7 @@ const CreateCourse = () => {
 
   const handleSubmit = async (values: CourseFormValues) => {
     try {
-      let imageUrl = values.image_url;
+      let imageUrl = values.image_url || null;
       
       if (imageFile) {
         const uploadedUrl = await uploadImage();
@@ -186,8 +185,13 @@ const CreateCourse = () => {
       
       // Preparar dados do curso para envio
       const courseData: CourseFormData = {
-        ...values,
-        image_url: imageUrl || null,
+        title: values.title,
+        description: values.description,
+        category: values.category,
+        duration: Number(values.duration),
+        level: values.level,
+        price: Number(values.price),
+        image_url: imageUrl,
       };
       
       // Criar curso no banco de dados
@@ -204,7 +208,6 @@ const CreateCourse = () => {
     }
   };
 
-  // Componente para exibir um item de conteúdo do curso
   const ContentItem = ({ type, title, index, moduleIndex, contentId }: { 
     type: 'video' | 'text' | 'quiz',
     title: string, 

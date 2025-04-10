@@ -18,7 +18,15 @@ export interface CourseType {
   updated_at: string;
 }
 
-export type CourseFormData = Omit<CourseType, 'id' | 'instructor_id' | 'created_at' | 'updated_at'>;
+export type CourseFormData = {
+  title: string;
+  description: string;
+  image_url: string | null;
+  price: number;
+  category: string;
+  duration: number;
+  level: string;
+};
 
 export function useCourses() {
   const { user } = useAuth();
