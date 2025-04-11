@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+
+import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { useEnrollment } from './useEnrollment';
 import { doc, getDoc, setDoc, updateDoc, arrayUnion, Timestamp } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 
@@ -62,16 +62,16 @@ interface ContentProgressData {
 /**
  * Hook para gerenciar o progresso do usuário em um conteúdo específico
  */
-export function useContentProgress({ courseId, moduleId, contentId }: ContentProgressParams) {
+export function useContentProgressForContent({ courseId, moduleId, contentId }: ContentProgressParams) {
   const [position, setPosition] = useState<number>(0);
   const [completed, setCompleted] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const toast = useToast();
+  const { toast } = useToast();
   const { user } = useAuth();
 
   // Chave para armazenamento no localStorage
-  const storageKey = `content-progress-${user?.uid || 'guest'}-${courseId}-${moduleId}-${contentId}`;
+  const storageKey = `content-progress-${user?.id || 'guest'}-${courseId}-${moduleId}-${contentId}`;
 
   // Carrega o progresso do localStorage
   useEffect(() => {
@@ -124,10 +124,9 @@ export function useContentProgress({ courseId, moduleId, contentId }: ContentPro
     } catch (err) {
       console.error('Erro ao salvar progresso:', err);
       toast({
+        variant: "destructive",
         title: 'Erro ao salvar progresso',
-        status: 'error',
-        duration: 3000,
-        isClosable: true,
+        description: 'Não foi possível salvar seu progresso'
       });
       setError('Não foi possível salvar seu progresso');
       return false;
@@ -152,21 +151,20 @@ export function useContentProgress({ courseId, moduleId, contentId }: ContentPro
 export const useContentProgress = (): UseContentProgressReturn => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const toast = useToast();
+  const { toast } = useToast();
   const { user } = useAuth();
-  const { checkEnrollment } = useEnrollment();
 
   /**
    * Obtém o documento de progresso do curso para o usuário atual
    */
   const getProgressDoc = async (courseId: string): Promise<CourseProgress | null> => {
-    if (!user?.uid) {
+    if (!user?.id) {
       setError('Usuário não autenticado');
       return null;
     }
 
     try {
-      const progressRef = doc(db, 'courseProgresses', `${user.uid}_${courseId}`);
+      const progressRef = doc(db, 'courseProgresses', `${user.id}_${courseId}`);
       const progressDoc = await getDoc(progressRef);
 
       if (progressDoc.exists()) {
@@ -175,7 +173,7 @@ export const useContentProgress = (): UseContentProgressReturn => {
         // Inicializa um novo documento de progresso se não existir
         const newProgressData: CourseProgress = {
           courseId,
-          userId: user.uid,
+          userId: user.id,
           lastAccessedAt: new Date(),
           completedModules: [],
           completedContents: [],
@@ -202,7 +200,7 @@ export const useContentProgress = (): UseContentProgressReturn => {
     currentTime: number,
     duration: number
   ): Promise<{success: boolean}> => {
-    if (!user?.uid) {
+    if (!user?.id) {
       return { success: false };
     }
 
@@ -210,7 +208,7 @@ export const useContentProgress = (): UseContentProgressReturn => {
     setError(null);
 
     try {
-      const progressRef = doc(db, 'courseProgresses', `${user.uid}_${courseId}`);
+      const progressRef = doc(db, 'courseProgresses', `${user.id}_${courseId}`);
       const progressDoc = await getDoc(progressRef);
       
       const progress = Math.round((currentTime / duration) * 100);
@@ -255,7 +253,7 @@ export const useContentProgress = (): UseContentProgressReturn => {
         // Criar um novo documento de progresso
         const newProgressData: CourseProgress = {
           courseId,
-          userId: user.uid,
+          userId: user.id,
           lastAccessedAt: new Date(),
           completedModules: [],
           completedContents: progressStatus === 'completed' ? [contentId] : [],
@@ -273,7 +271,7 @@ export const useContentProgress = (): UseContentProgressReturn => {
       setLoading(false);
       return { success: false };
     }
-  }, [user?.uid]);
+  }, [user?.id]);
 
   /**
    * Marca um conteúdo como concluído
@@ -284,7 +282,7 @@ export const useContentProgress = (): UseContentProgressReturn => {
     contentId: string,
     extraData?: any
   ): Promise<{success: boolean}> => {
-    if (!user?.uid) {
+    if (!user?.id) {
       return { success: false };
     }
 
@@ -292,7 +290,7 @@ export const useContentProgress = (): UseContentProgressReturn => {
     setError(null);
 
     try {
-      const progressRef = doc(db, 'courseProgresses', `${user.uid}_${courseId}`);
+      const progressRef = doc(db, 'courseProgresses', `${user.id}_${courseId}`);
       const progressDoc = await getDoc(progressRef);
       
       const contentProgress: ContentProgress = {
@@ -340,7 +338,7 @@ export const useContentProgress = (): UseContentProgressReturn => {
         // Criar um novo documento de progresso
         const newProgressData: CourseProgress = {
           courseId,
-          userId: user.uid,
+          userId: user.id,
           lastAccessedAt: new Date(),
           completedModules: [],
           completedContents: [contentId],
@@ -358,7 +356,7 @@ export const useContentProgress = (): UseContentProgressReturn => {
       setLoading(false);
       return { success: false };
     }
-  }, [user?.uid]);
+  }, [user?.id]);
 
   /**
    * Obtém o progresso de um conteúdo específico
@@ -367,7 +365,7 @@ export const useContentProgress = (): UseContentProgressReturn => {
     courseId: string,
     contentId: string
   ): Promise<ContentProgress | null> => {
-    if (!user?.uid) {
+    if (!user?.id) {
       return null;
     }
 
@@ -388,7 +386,7 @@ export const useContentProgress = (): UseContentProgressReturn => {
       setError('Erro ao carregar progresso do conteúdo');
       return null;
     }
-  }, [user?.uid]);
+  }, [user?.id]);
 
   /**
    * Obtém o progresso completo do curso
@@ -397,7 +395,7 @@ export const useContentProgress = (): UseContentProgressReturn => {
     courseId: string
   ): Promise<CourseProgress | null> => {
     return getProgressDoc(courseId);
-  }, [user?.uid]);
+  }, [user?.id]);
 
   /**
    * Calcula a porcentagem de conclusão do curso
@@ -447,7 +445,7 @@ export const useContentProgress = (): UseContentProgressReturn => {
       console.error('Erro ao calcular porcentagem de conclusão:', err);
       return 0;
     }
-  }, [user?.uid]);
+  }, [user?.id]);
 
   return {
     saveVideoProgress,
@@ -458,4 +456,7 @@ export const useContentProgress = (): UseContentProgressReturn => {
     loading,
     error
   };
-}; 
+};
+
+// Added imports to use useEffect
+import { useEffect } from 'react';

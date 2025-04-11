@@ -3,16 +3,8 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-
-export interface ProfileType {
-  id: string;
-  name: string | null;
-  email: string | null;
-  avatar_url: string | null;
-  created_at: string;
-  updated_at: string;
-  social_links?: { [key: string]: string } | null;
-}
+import { ProfileType } from '@/hooks/useProfile';
+import { Json } from '@/integrations/supabase/types';
 
 interface AuthContextType {
   session: Session | null;
@@ -87,7 +79,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       console.log('Profile data loaded:', data);
-      setProfile(data);
+      // Convert data to ProfileType to ensure compatibility
+      const profileData: ProfileType = {
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        avatar_url: data.avatar_url,
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+        social_links: data.social_links
+      };
+      setProfile(profileData);
     } catch (error) {
       console.error('Exception when fetching profile:', error);
     } finally {

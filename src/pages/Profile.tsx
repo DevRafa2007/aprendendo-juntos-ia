@@ -20,6 +20,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useProfile, ProfileType } from '@/hooks/useProfile';
+import { setupImageBucket } from '@/integrations/supabase/client';
 
 interface CourseData {
   id: string;
@@ -195,7 +196,7 @@ const Profile = () => {
       
       setIsUpdating(true);
       
-      await setupBucket('avatars', true, 5 * 1024 * 1024);
+      await setupImageBucket();
       
       const { error: uploadError } = await supabase.storage
         .from('avatars')

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { Json } from '@/integrations/supabase/types';
 
 export interface ProfileType {
   id: string;
@@ -11,7 +12,7 @@ export interface ProfileType {
   avatar_url: string | null;
   created_at: string;
   updated_at: string;
-  social_links?: { [key: string]: string } | null;
+  social_links?: { [key: string]: string } | Json | null;
 }
 
 export function useProfile(userId?: string) {
@@ -46,7 +47,17 @@ export function useProfile(userId?: string) {
         }
 
         console.log('Profile data fetched:', data);
-        setProfile(data);
+        // Convert data to ProfileType to ensure compatibility
+        const profileData: ProfileType = {
+          id: data.id,
+          name: data.name,
+          email: data.email,
+          avatar_url: data.avatar_url,
+          created_at: data.created_at,
+          updated_at: data.updated_at,
+          social_links: data.social_links
+        };
+        setProfile(profileData);
       } catch (error: any) {
         console.error('Error in profile fetch:', error);
         setError(error);
@@ -96,7 +107,17 @@ export function useProfile(userId?: string) {
       }
 
       console.log('Profile updated successfully:', data);
-      setProfile(data);
+      // Convert data to ProfileType to ensure compatibility
+      const profileData: ProfileType = {
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        avatar_url: data.avatar_url,
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+        social_links: data.social_links
+      };
+      setProfile(profileData);
       toast({
         title: "Perfil atualizado",
         description: "Seu perfil foi atualizado com sucesso!"

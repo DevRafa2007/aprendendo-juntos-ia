@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -47,7 +48,7 @@ const CourseProgressCard: React.FC<CourseProgressCardProps> = ({
   const getStatusBadge = () => {
     if (completed) {
       return (
-        <Badge variant="success" className="bg-green-500">
+        <Badge className="bg-green-500 text-white">
           <CheckCircle className="mr-1 h-3 w-3" />
           Concluído
         </Badge>
@@ -79,7 +80,7 @@ const CourseProgressCard: React.FC<CourseProgressCardProps> = ({
     }
     
     return (
-      <Badge variant="success" className="bg-green-500">
+      <Badge className="bg-green-500 text-white">
         Quase concluído
       </Badge>
     );
@@ -194,4 +195,4 @@ const CourseProgressCard: React.FC<CourseProgressCardProps> = ({
   );
 };
 
-export default CourseProgressCard; 
+export default CourseProgressCard;

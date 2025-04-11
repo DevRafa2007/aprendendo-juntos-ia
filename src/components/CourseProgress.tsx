@@ -1,24 +1,16 @@
+
 import React, { useEffect, useState } from 'react';
-import {
-  Box,
-  Progress,
-  Text,
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
+import { 
   Accordion,
+  AccordionContent,
   AccordionItem,
-  AccordionButton,
-  AccordionPanel,
-  AccordionIcon,
-  List,
-  ListItem,
-  Flex,
-  Icon,
-  Badge,
-  Heading,
-  Skeleton,
-} from '@chakra-ui/react';
-import { CheckCircleIcon, TimeIcon, LockIcon } from '@chakra-ui/icons';
-import { FaPlayCircle, FaFileAlt, FaQuestionCircle } from 'react-icons/fa';
-import { useAuth } from '../contexts/AuthContext';
+  AccordionTrigger
+} from '@/components/ui/accordion';
+import { useAuth } from '@/context/AuthContext';
+import { CheckCircle, Clock, Lock, Play, FileText, HelpCircle } from 'lucide-react';
 
 interface ContentItem {
   id: string;
@@ -79,115 +71,108 @@ export const CourseProgress: React.FC<CourseProgressProps> = ({
   const renderContentIcon = (type: string) => {
     switch (type) {
       case 'video':
-        return <Icon as={FaPlayCircle} color="blue.500" mr={2} />;
+        return <Play className="h-4 w-4 text-blue-500 mr-2" />;
       case 'text':
-        return <Icon as={FaFileAlt} color="green.500" mr={2} />;
+        return <FileText className="h-4 w-4 text-green-500 mr-2" />;
       case 'document':
-        return <Icon as={FaFileAlt} color="purple.500" mr={2} />;
+        return <FileText className="h-4 w-4 text-purple-500 mr-2" />;
       case 'quiz':
-        return <Icon as={FaQuestionCircle} color="orange.500" mr={2} />;
+        return <HelpCircle className="h-4 w-4 text-orange-500 mr-2" />;
       default:
-        return <Icon as={FaFileAlt} color="gray.500" mr={2} />;
+        return <FileText className="h-4 w-4 text-gray-500 mr-2" />;
     }
   };
 
   if (isLoading) {
     return (
-      <Box p={4} borderWidth="1px" borderRadius="lg">
-        <Skeleton height="20px" width="200px" mb={4} />
-        <Skeleton height="20px" mb={2} />
-        <Skeleton height="150px" mb={4} />
-        <Skeleton height="20px" mb={2} />
-        <Skeleton height="150px" />
-      </Box>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Seu progresso</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="h-5 bg-gray-200 rounded animate-pulse"></div>
+          <div className="h-32 bg-gray-200 rounded animate-pulse"></div>
+          <div className="h-5 bg-gray-200 rounded animate-pulse"></div>
+          <div className="h-32 bg-gray-200 rounded animate-pulse"></div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <Box p={4} borderWidth="1px" borderRadius="lg" bg="white" shadow="md">
-      <Heading size="md" mb={4}>
-        Seu progresso
-      </Heading>
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">Seu progresso</CardTitle>
+      </CardHeader>
       
-      <Flex align="center" mb={4}>
-        <Progress
-          value={progressPercent}
-          size="md"
-          colorScheme="blue"
-          borderRadius="md"
-          flex="1"
-          mr={3}
-        />
-        <Text fontWeight="bold" width="50px" textAlign="right">
-          {progressPercent}%
-        </Text>
-      </Flex>
+      <CardContent className="space-y-4">
+        <div className="flex items-center mb-4">
+          <Progress
+            value={progressPercent}
+            className="h-2 flex-1 mr-3"
+          />
+          <span className="font-bold w-12 text-right">
+            {progressPercent}%
+          </span>
+        </div>
 
-      <Accordion allowMultiple defaultIndex={[0]}>
-        {modules.map((module) => (
-          <AccordionItem key={module.id}>
-            <h2>
-              <AccordionButton py={3}>
-                <Box flex="1" textAlign="left" fontWeight="medium">
-                  <Flex align="center">
+        <Accordion type="multiple" defaultValue={[modules[0]?.id]}>
+          {modules.map((module) => (
+            <AccordionItem key={module.id} value={module.id}>
+              <AccordionTrigger className="py-3 hover:no-underline">
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center">
                     {module.completed ? (
-                      <CheckCircleIcon color="green.500" mr={2} />
+                      <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
                     ) : module.locked ? (
-                      <LockIcon color="gray.500" mr={2} />
+                      <Lock className="h-4 w-4 text-gray-500 mr-2" />
                     ) : (
-                      <TimeIcon color="blue.500" mr={2} />
+                      <Clock className="h-4 w-4 text-blue-500 mr-2" />
                     )}
-                    {module.title}
-                  </Flex>
-                </Box>
-                <Badge colorScheme={module.completed ? "green" : "blue"} mr={2}>
-                  {getModuleProgressText(module)}
-                </Badge>
-                <AccordionIcon />
-              </AccordionButton>
-            </h2>
-            <AccordionPanel pb={4}>
-              <List spacing={2}>
-                {module.contents.map((content) => (
-                  <ListItem 
-                    key={content.id} 
-                    p={2} 
-                    borderRadius="md"
-                    bg={content.completed ? "green.50" : "white"}
-                    _hover={{ 
-                      bg: content.locked ? "gray.50" : "blue.50",
-                      cursor: content.locked ? "not-allowed" : "pointer" 
-                    }}
-                    opacity={content.locked ? 0.7 : 1}
-                    onClick={() => {
-                      if (!content.locked && onContentSelect) {
-                        onContentSelect(module.id, content.id);
-                      }
-                    }}
-                  >
-                    <Flex align="center" justify="space-between">
-                      <Flex align="center">
-                        {content.locked ? (
-                          <LockIcon color="gray.500" mr={2} />
-                        ) : (
-                          renderContentIcon(content.type)
+                    <span className="font-medium">{module.title}</span>
+                  </div>
+                  <Badge variant={module.completed ? "default" : "outline"} className="ml-2">
+                    {getModuleProgressText(module)}
+                  </Badge>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <ul className="space-y-2 mt-2">
+                  {module.contents.map((content) => (
+                    <li 
+                      key={content.id} 
+                      className={`p-2 rounded-md ${content.completed ? "bg-green-50" : "bg-white"} 
+                        ${content.locked ? "opacity-70 cursor-not-allowed" : "hover:bg-blue-50 cursor-pointer"}`}
+                      onClick={() => {
+                        if (!content.locked && onContentSelect) {
+                          onContentSelect(module.id, content.id);
+                        }
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          {content.locked ? (
+                            <Lock className="h-4 w-4 text-gray-500 mr-2" />
+                          ) : (
+                            renderContentIcon(content.type)
+                          )}
+                          <span className={content.locked ? "text-gray-500" : ""}>
+                            {content.title}
+                          </span>
+                        </div>
+                        {content.completed && (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
                         )}
-                        <Text color={content.locked ? "gray.500" : "inherit"}>
-                          {content.title}
-                        </Text>
-                      </Flex>
-                      {content.completed && (
-                        <CheckCircleIcon color="green.500" />
-                      )}
-                    </Flex>
-                  </ListItem>
-                ))}
-              </List>
-            </AccordionPanel>
-          </AccordionItem>
-        ))}
-      </Accordion>
-    </Box>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      </CardContent>
+    </Card>
   );
 };
 
@@ -200,4 +185,4 @@ function getModuleProgressText(module: Module): string {
   const completedContents = module.contents.filter(c => c.completed).length;
   
   return `${completedContents}/${totalContents}`;
-} 
+}
