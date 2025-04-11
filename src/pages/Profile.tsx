@@ -10,7 +10,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   User, CreditCard, Bell, Lock, Upload, CheckCircle, 
   Folder, Award, Settings, BookOpen, Bookmark, Clock, Calendar, 
-  Pencil, Heart, FileCheck, BarChart, ChevronRight, FileDown, PlusCircle
+  Pencil, Heart, FileCheck, BarChart, ChevronRight, FileDown, PlusCircle,
+  Loader
 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
@@ -18,8 +19,8 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import { useProfile, ProfileType } from '@/hooks/useProfile';
 
-// Definição da interface para cursos
 interface CourseData {
   id: string;
   title: string;
@@ -38,7 +39,6 @@ interface CourseData {
   savingDate?: string;
 }
 
-// Definição da interface para certificados
 interface CertificateData {
   id: string;
   title: string;
@@ -49,17 +49,20 @@ interface CertificateData {
 
 const Profile = () => {
   const [activeTab, setActiveTab] = useState('meus-cursos');
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, profile: authProfile, refreshProfile } = useAuth();
+  const { profile, isLoading: profileLoading, updateProfile } = useProfile();
   const { toast } = useToast();
   
-  // Estados para os cursos e certificados
+  const [editName, setEditName] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  
   const [inProgressCourses, setInProgressCourses] = useState<CourseData[]>([]);
   const [completedCourses, setCompletedCourses] = useState<CourseData[]>([]);
   const [savedCourses, setSavedCourses] = useState<CourseData[]>([]);
   const [certificates, setCertificates] = useState<CertificateData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Estado para configurações de notificações
   const [notificationSettings, setNotificationSettings] = useState({
     courseUpdates: true,
     newMessages: true,
@@ -68,138 +71,77 @@ const Profile = () => {
     completionReminders: true,
   });
   
-  // Carregar os dados do usuário ao montar o componente
+  useEffect(() => {
+    if (profile) {
+      setEditName(profile.name || '');
+      setAvatarUrl(profile.avatar_url);
+    }
+  }, [profile]);
+  
   useEffect(() => {
     const fetchUserData = async () => {
       if (!user) return;
       
       setIsLoading(true);
+      console.log("Fetching user data for:", user.id);
+      
       try {
-        // Buscar cursos em andamento
         const { data: inProgressData, error: inProgressError } = await supabase
-          .from('user_courses')
+          .from('enrollments')
           .select('*, course:courses(*)')
           .eq('user_id', user.id)
-          .eq('status', 'in_progress');
+          .eq('completed', false);
         
-        if (inProgressError) throw inProgressError;
+        if (inProgressError) {
+          console.error("Error fetching in-progress courses:", inProgressError);
+          throw inProgressError;
+        }
+        console.log("In-progress courses:", inProgressData);
         
-        // Buscar cursos concluídos
         const { data: completedData, error: completedError } = await supabase
-          .from('user_courses')
+          .from('enrollments')
           .select('*, course:courses(*)')
           .eq('user_id', user.id)
-          .eq('status', 'completed');
+          .eq('completed', true);
         
-        if (completedError) throw completedError;
+        if (completedError) {
+          console.error("Error fetching completed courses:", completedError);
+          throw completedError;
+        }
+        console.log("Completed courses:", completedData);
         
-        // Buscar cursos salvos
-        const { data: savedData, error: savedError } = await supabase
-          .from('saved_courses')
-          .select('*, course:courses(*)')
-          .eq('user_id', user.id);
+        const savedData: any[] = [];
         
-        if (savedError) throw savedError;
+        const certificatesData: any[] = [];
         
-        // Buscar certificados
-        const { data: certificatesData, error: certificatesError } = await supabase
-          .from('certificates')
-          .select('*, course:courses(*)')
-          .eq('user_id', user.id);
-        
-        if (certificatesError) throw certificatesError;
-        
-        // Formatar os dados de cursos em andamento
-        const formattedInProgress = inProgressData.map((item) => ({
-          id: item.course.id,
-          title: item.course.title,
-          instructor: item.course.instructor_name,
-          image: item.course.image_url,
+        const formattedInProgress = inProgressData && inProgressData.length > 0 ? inProgressData.map((item) => ({
+          id: item.course?.id || '',
+          title: item.course?.title || 'Curso sem título',
+          instructor: 'Instrutor',
+          image: item.course?.image_url || 'https://via.placeholder.com/600x400',
           progress: item.progress || 0,
-          lastAccessed: item.last_accessed ? format(new Date(item.last_accessed), 'dd/MM/yyyy') : '',
-          nextLesson: item.current_lesson_title || 'Primeira aula',
-          totalLessons: item.course.lesson_count || 0,
-          completedLessons: Math.floor((item.progress || 0) * (item.course.lesson_count || 0) / 100),
-        }));
+          lastAccessed: item.enrolled_at ? format(new Date(item.enrolled_at), 'dd/MM/yyyy') : '',
+          nextLesson: 'Próxima aula',
+          totalLessons: 10,
+          completedLessons: Math.floor((item.progress || 0) * 10 / 100),
+        })) : [];
         
-        // Formatar os dados de cursos concluídos
-        const formattedCompleted = completedData.map((item) => ({
-          id: item.course.id,
-          title: item.course.title,
-          instructor: item.course.instructor_name,
-          image: item.course.image_url,
-          completedDate: item.completed_at ? format(new Date(item.completed_at), 'dd/MM/yyyy') : '',
-          isCertificateIssued: Boolean(item.certificate_id),
-          rating: item.rating || 0,
-        }));
+        const formattedCompleted = completedData && completedData.length > 0 ? completedData.map((item) => ({
+          id: item.course?.id || '',
+          title: item.course?.title || 'Curso sem título',
+          instructor: 'Instrutor',
+          image: item.course?.image_url || 'https://via.placeholder.com/600x400',
+          completedDate: item.enrolled_at ? format(new Date(item.enrolled_at), 'dd/MM/yyyy') : '',
+          isCertificateIssued: false,
+          rating: 5,
+        })) : [];
         
-        // Formatar os dados de cursos salvos
-        const formattedSaved = savedData.map((item) => ({
-          id: item.course.id,
-          title: item.course.title,
-          instructor: item.course.instructor_name,
-          image: item.course.image_url,
-          price: item.course.price || 0,
-          isFree: item.course.is_free,
-          savingDate: item.created_at ? format(new Date(item.created_at), 'dd/MM/yyyy') : '',
-        }));
-        
-        // Formatar os dados de certificados
-        const formattedCertificates = certificatesData.map((item) => ({
-          id: item.id,
-          title: item.course.title,
-          issueDate: item.issue_date ? format(new Date(item.issue_date), 'dd/MM/yyyy') : '',
-          courseId: item.course.id,
-          image: item.course.image_url,
-        }));
-        
-        // Atualizar os estados
         setInProgressCourses(formattedInProgress);
         setCompletedCourses(formattedCompleted);
-        setSavedCourses(formattedSaved);
-        setCertificates(formattedCertificates);
+        setSavedCourses([]);
+        setCertificates([]);
       } catch (error) {
         console.error('Erro ao buscar dados do usuário:', error);
-        
-        // Em caso de erro, usar dados simulados para desenvolvimento
-        // Na produção, seria melhor mostrar uma mensagem de erro
-        setInProgressCourses([
-          {
-            id: '1',
-            title: 'React e TypeScript: desenvolvendo uma aplicação completa',
-            instructor: 'Amanda Costa',
-            image: 'https://picsum.photos/id/23/600/400',
-            progress: 35,
-            lastAccessed: '24/03/2024',
-            nextLesson: 'UseEffect e ciclo de vida',
-            totalLessons: 20,
-            completedLessons: 7,
-          },
-          {
-            id: '2',
-            title: 'Marketing Digital Avançado: Estratégias de Conversão',
-            instructor: 'Camila Souza',
-            image: 'https://picsum.photos/id/32/600/400',
-            progress: 15,
-            lastAccessed: '22/03/2024',
-            nextLesson: 'Estratégias de SEO para aumento de tráfego',
-            totalLessons: 18,
-            completedLessons: 3,
-          },
-        ]);
-        
-        setCompletedCourses([
-          {
-            id: '3',
-            title: 'Pré-aceleração Sebrae Startups',
-            instructor: 'João Silva',
-            image: 'https://picsum.photos/id/20/600/400',
-            completedDate: '15/02/2024',
-            isCertificateIssued: true,
-            rating: 5,
-          },
-        ]);
-        
         toast({
           variant: "destructive",
           title: "Erro ao carregar dados",
@@ -213,33 +155,154 @@ const Profile = () => {
     fetchUserData();
   }, [user, toast]);
   
-  // Cálculo das estatísticas do usuário
+  const handleSaveProfile = async () => {
+    try {
+      setIsUpdating(true);
+      
+      const updates: Partial<ProfileType> = {
+        name: editName,
+      };
+      
+      const { error } = await updateProfile(updates);
+      
+      if (error) throw error;
+      
+      await refreshProfile();
+      toast({
+        title: "Perfil atualizado",
+        description: "Suas informações foram atualizadas com sucesso!"
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao atualizar perfil",
+        description: error.message
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+  
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      if (!event.target.files || event.target.files.length === 0) {
+        return;
+      }
+      
+      const file = event.target.files[0];
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${user?.id}/avatar.${fileExt}`;
+      
+      setIsUpdating(true);
+      
+      await setupBucket('avatars', true, 5 * 1024 * 1024);
+      
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true });
+      
+      if (uploadError) throw uploadError;
+      
+      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      
+      await updateProfile({
+        avatar_url: data.publicUrl
+      });
+      
+      await refreshProfile();
+      setAvatarUrl(data.publicUrl);
+      
+      toast({
+        title: "Avatar atualizado",
+        description: "Sua foto de perfil foi atualizada com sucesso!"
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao atualizar avatar",
+        description: error.message
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+  
   const userStats = {
     coursesInProgress: inProgressCourses.length,
     coursesCompleted: completedCourses.length,
     certificateCount: certificates.length,
   };
 
+  if (profileLoading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-grow flex items-center justify-center">
+          <div className="text-center">
+            <Loader className="h-10 w-10 animate-spin mx-auto mb-4 text-brand-blue" />
+            <p className="text-muted-foreground">Carregando perfil...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-grow flex items-center justify-center">
+          <Card className="w-full max-w-md">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <User className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h2 className="text-2xl font-bold mb-2">Acesso não autorizado</h2>
+                <p className="text-muted-foreground mb-6">
+                  Você precisa estar logado para acessar esta página.
+                </p>
+                <Button asChild>
+                  <a href="/auth">Fazer login</a>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
       <main className="flex-grow">
-        {/* Cabeçalho do perfil */}
         <section className="bg-brand-blue text-white py-12">
           <div className="container mx-auto px-4">
             <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
               <div className="relative">
                 <Avatar className="w-24 h-24 border-4 border-white">
                   <AvatarImage src={profile?.avatar_url || ''} />
-                  <AvatarFallback>{profile?.name?.split(' ').map(n => n[0]).join('') || user?.email?.substring(0, 2).toUpperCase()}</AvatarFallback>
+                  <AvatarFallback>{profile?.name?.split(' ').map(n => n?.[0]).join('') || user?.email?.substring(0, 2).toUpperCase()}</AvatarFallback>
                 </Avatar>
-                <Button 
-                  variant="secondary" 
-                  size="icon" 
-                  className="absolute bottom-0 right-0 rounded-full w-8 h-8"
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
+                <label htmlFor="avatar-upload">
+                  <Button 
+                    variant="secondary" 
+                    size="icon" 
+                    className="absolute bottom-0 right-0 rounded-full w-8 h-8 cursor-pointer"
+                    type="button"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <input 
+                    id="avatar-upload" 
+                    type="file" 
+                    className="hidden" 
+                    accept="image/*"
+                    onChange={handleAvatarUpload}
+                    disabled={isUpdating}
+                  />
+                </label>
               </div>
               <div className="text-center md:text-left">
                 <h1 className="text-3xl font-bold">{profile?.name || 'Usuário'}</h1>
@@ -263,10 +326,8 @@ const Profile = () => {
           </div>
         </section>
 
-        {/* Conteúdo principal */}
         <div className="container mx-auto px-4 py-8">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            {/* Coluna de navegação */}
             <div className="lg:col-span-1">
               <Card className="sticky top-24">
                 <CardContent className="p-0">
@@ -304,16 +365,13 @@ const Profile = () => {
               </Card>
             </div>
 
-            {/* Coluna de conteúdo */}
             <div className="lg:col-span-3 space-y-8">
-              {/* Indicador de carregamento */}
               {isLoading && (
                 <div className="flex justify-center items-center h-64">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-blue"></div>
                 </div>
               )}
               
-              {/* Meus Cursos */}
               {!isLoading && activeTab === 'meus-cursos' && (
                 <div>
                   <Tabs defaultValue="em-andamento">
@@ -322,7 +380,6 @@ const Profile = () => {
                       <TabsTrigger value="concluidos">Concluídos</TabsTrigger>
                     </TabsList>
                     
-                    {/* Cursos em andamento */}
                     <TabsContent value="em-andamento" className="space-y-6">
                       {inProgressCourses.length === 0 ? (
                         <div className="text-center py-12 bg-muted rounded-lg">
@@ -385,7 +442,6 @@ const Profile = () => {
                       )}
                     </TabsContent>
                     
-                    {/* Cursos concluídos */}
                     <TabsContent value="concluidos" className="space-y-6">
                       {completedCourses.length === 0 ? (
                         <div className="text-center py-12 bg-muted rounded-lg">
@@ -468,7 +524,6 @@ const Profile = () => {
                 </div>
               )}
 
-              {/* Cursos Salvos */}
               {activeTab === 'salvos' && (
                 <div>
                   <h2 className="text-2xl font-bold mb-6">Cursos Salvos</h2>
@@ -527,7 +582,6 @@ const Profile = () => {
                 </div>
               )}
 
-              {/* Certificados */}
               {activeTab === 'certificados' && (
                 <div>
                   <h2 className="text-2xl font-bold mb-6">Meus Certificados</h2>
@@ -578,8 +632,7 @@ const Profile = () => {
                 </div>
               )}
 
-              {/* Configurações */}
-              {activeTab === 'configuracoes' && (
+              {activeTab === 'configuracoes' && !isLoading && (
                 <div>
                   <h2 className="text-2xl font-bold mb-6">Configurações da Conta</h2>
                   
@@ -591,7 +644,6 @@ const Profile = () => {
                       <TabsTrigger value="seguranca">Segurança</TabsTrigger>
                     </TabsList>
                     
-                    {/* Configurações de Perfil */}
                     <TabsContent value="perfil">
                       <Card>
                         <CardContent className="pt-6">
@@ -601,7 +653,7 @@ const Profile = () => {
                                 <Avatar className="w-32 h-32 mx-auto">
                                   <AvatarImage src={profile?.avatar_url || ''} />
                                   <AvatarFallback className="text-4xl">
-                                    {profile?.name?.split(' ').map(n => n[0]).join('') || user?.email?.substring(0, 2).toUpperCase()}
+                                    {profile?.name?.split(' ').map(n => n?.[0]).join('') || user?.email?.substring(0, 2).toUpperCase()}
                                   </AvatarFallback>
                                 </Avatar>
                               </div>
@@ -611,11 +663,49 @@ const Profile = () => {
                                   Uma foto de perfil ajuda a personalizar sua conta e torna a experiência mais amigável.
                                 </p>
                                 <div className="flex gap-3">
-                                  <Button>
-                                    <Upload className="h-4 w-4 mr-2" />
-                                    Alterar Foto
+                                  <label htmlFor="avatar-upload-settings" className="relative">
+                                    <Button 
+                                      disabled={isUpdating}
+                                      className="cursor-pointer"
+                                    >
+                                      <Upload className="h-4 w-4 mr-2" />
+                                      Alterar Foto
+                                    </Button>
+                                    <input 
+                                      id="avatar-upload-settings" 
+                                      type="file" 
+                                      className="hidden" 
+                                      accept="image/*"
+                                      onChange={handleAvatarUpload}
+                                      disabled={isUpdating}
+                                    />
+                                  </label>
+                                  <Button 
+                                    variant="outline" 
+                                    disabled={isUpdating || !profile?.avatar_url}
+                                    onClick={async () => {
+                                      try {
+                                        setIsUpdating(true);
+                                        await updateProfile({ avatar_url: null });
+                                        await refreshProfile();
+                                        setAvatarUrl(null);
+                                        toast({
+                                          title: "Foto removida",
+                                          description: "Sua foto de perfil foi removida com sucesso."
+                                        });
+                                      } catch (error: any) {
+                                        toast({
+                                          variant: "destructive",
+                                          title: "Erro ao remover foto",
+                                          description: error.message
+                                        });
+                                      } finally {
+                                        setIsUpdating(false);
+                                      }
+                                    }}
+                                  >
+                                    Remover
                                   </Button>
-                                  <Button variant="outline">Remover</Button>
                                 </div>
                               </div>
                             </div>
@@ -623,29 +713,41 @@ const Profile = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                               <div className="space-y-2">
                                 <Label htmlFor="profile-name">Nome completo</Label>
-                                <Input id="profile-name" value={profile?.name || ''} />
+                                <Input 
+                                  id="profile-name" 
+                                  value={editName} 
+                                  onChange={(e) => setEditName(e.target.value)}
+                                  disabled={isUpdating}
+                                />
                               </div>
                               <div className="space-y-2">
                                 <Label htmlFor="profile-email">Email</Label>
-                                <Input id="profile-email" value={profile?.email || user?.email || ''} type="email" />
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="profile-bio">Biografia</Label>
-                                <Input id="profile-bio" placeholder="Conte um pouco sobre você" />
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="profile-website">Website</Label>
-                                <Input id="profile-website" placeholder="https://www.seuwebsite.com" />
+                                <Input 
+                                  id="profile-email" 
+                                  value={profile?.email || user?.email || ''} 
+                                  type="email" 
+                                  disabled 
+                                />
                               </div>
                             </div>
                             
-                            <Button>Salvar Alterações</Button>
+                            <Button 
+                              onClick={handleSaveProfile}
+                              disabled={isUpdating}
+                              className="relative"
+                            >
+                              {isUpdating ? (
+                                <>
+                                  <Loader className="h-4 w-4 mr-2 animate-spin" />
+                                  Salvando...
+                                </>
+                              ) : "Salvar Alterações"}
+                            </Button>
                           </div>
                         </CardContent>
                       </Card>
                     </TabsContent>
                     
-                    {/* Configurações de Notificações */}
                     <TabsContent value="notificacoes">
                       <Card>
                         <CardContent className="pt-6">
@@ -703,7 +805,6 @@ const Profile = () => {
                       </Card>
                     </TabsContent>
                     
-                    {/* Configurações de Pagamento */}
                     <TabsContent value="pagamento">
                       <Card>
                         <CardContent className="pt-6">
@@ -774,7 +875,6 @@ const Profile = () => {
                       </Card>
                     </TabsContent>
                     
-                    {/* Configurações de Segurança */}
                     <TabsContent value="seguranca">
                       <Card>
                         <CardContent className="pt-6">

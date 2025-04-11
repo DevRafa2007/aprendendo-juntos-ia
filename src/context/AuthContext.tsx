@@ -11,6 +11,7 @@ export interface ProfileType {
   avatar_url: string | null;
   created_at: string;
   updated_at: string;
+  social_links?: { [key: string]: string } | null;
 }
 
 interface AuthContextType {
@@ -37,6 +38,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Configurar o listener para mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
+        console.log('Auth state changed:', event, currentSession?.user?.id);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
@@ -53,14 +55,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Verificar sessão atual
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      console.log('Initial session check:', currentSession?.user?.id);
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       
       if (currentSession?.user) {
         fetchProfile(currentSession.user.id);
+      } else {
+        setIsLoading(false);
       }
-      
-      setIsLoading(false);
     });
 
     return () => {
@@ -70,6 +73,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchProfile = async (userId: string) => {
     try {
+      console.log('Fetching profile data for user:', userId);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -77,18 +81,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (error) {
-        console.error('Erro ao buscar perfil:', error);
+        console.error('Error fetching profile:', error);
+        setIsLoading(false);
         return;
       }
 
+      console.log('Profile data loaded:', data);
       setProfile(data);
     } catch (error) {
-      console.error('Erro ao buscar perfil:', error);
+      console.error('Exception when fetching profile:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const refreshProfile = async () => {
     if (user) {
+      console.log('Refreshing profile for user:', user.id);
       await fetchProfile(user.id);
     }
   };

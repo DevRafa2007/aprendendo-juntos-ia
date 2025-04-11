@@ -405,3 +405,27 @@ Este é um projeto de plataforma de cursos online desenvolvido com React, TypeSc
 - [ ] Implementar níveis de experiência para alunos
 - [ ] Adicionar desafios semanais e competições
 - [ ] Criar tabelas de classificação por curso e global 
+
+## Correções de Bugs e Melhorias Recentes
+
+### Correções na Integração com Supabase
+- **Tipagem correta**: Correção dos erros de TypeScript relacionados à tipagem no cliente Supabase
+- **Manipulação de erros**: Melhoria na forma como erros do Supabase são capturados e exibidos para o usuário
+- **Carregamento de perfil**: Correção de bugs no carregamento de dados de perfil do usuário
+- **Feedback visual**: Adição de indicadores de carregamento para melhor experiência do usuário
+- **Logs detalhados**: Implementação de logs detalhados para facilitar a depuração de problemas de conexão
+- **Prevenção de deadlocks**: Uso correto de setTimeout para evitar deadlocks ao buscar dados de perfil após autenticação
+- **Upload de avatar**: Correção na funcionalidade de upload de avatar para perfil de usuário
+
+### Melhorias na Página de Perfil
+- **Tratamento de estados**: Melhor gerenciamento de estados de carregamento e exibição de dados
+- **Validação de dados**: Corrigido problema com campos obrigatórios ao exibir dados de perfil
+- **Experiência do usuário**: Implementação de feedback visual durante operações assíncronas
+- **Edição de perfil**: Simplificação do fluxo de edição de informações de perfil
+- **Visualização de cursos**: Corrigida a exibição de cursos em andamento e concluídos do usuário
+
+### Melhorias de Performance e UX
+- **Inicialização otimizada**: Melhor sequência de inicialização do cliente Supabase
+- **Gestão de sessão**: Tratamento correto da sessão do usuário para evitar problemas de autenticação
+- **Prevenção de erros**: Verificações mais robustas antes de realizar operações que exigem autenticação
+- **Consistência de dados**: Garantia de que os dados apresentados são atualizados após modificações
