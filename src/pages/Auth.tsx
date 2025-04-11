@@ -1,11 +1,12 @@
+
 import { useState } from 'react';
-import { useRouter } from 'next/router';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from '@/components/ui/toaster';
+import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
 const Auth = () => {
@@ -16,7 +17,7 @@ const Auth = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { signIn, signUp } = useAuth();
-  const router = useRouter();
+  const navigate = useNavigate();
 
   const handleSignIn = async () => {
     setLoading(true);
@@ -25,7 +26,7 @@ const Auth = () => {
       if (error) {
         setError(error.message);
       } else {
-        router.push('/');
+        navigate('/');
         toast({
           title: 'Login realizado com sucesso!',
           description: 'Você será redirecionado para a página inicial.',
@@ -45,7 +46,7 @@ const Auth = () => {
       if (error) {
         setError(error.message);
       } else {
-        router.push('/login');
+        navigate('/login');
         toast({
           title: 'Cadastro realizado com sucesso!',
           description: 'Verifique seu e-mail para confirmar o cadastro.',
