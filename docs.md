@@ -1,3 +1,4 @@
+
 # Documentação do Projeto Aprendendo Juntos IA
 
 ## Visão Geral
@@ -62,6 +63,11 @@ Este é um projeto de plataforma de cursos online desenvolvido com React, TypeSc
     - Progresso personalizado para uploads
     - Remoção de arquivos
     - Utilitários para manipulação de arquivos
+  - `reviewService.ts`: Serviços para gerenciamento de avaliações de cursos
+    - Criação, edição e remoção de avaliações
+    - Consulta de avaliações por curso
+    - Reações (útil/não útil) às avaliações
+    - Relatórios e moderação de avaliações
 
 - **/integrations**: Integrações com serviços externos
   - `/supabase`: Configurações e funções do Supabase
@@ -73,6 +79,11 @@ Este é um projeto de plataforma de cursos online desenvolvido com React, TypeSc
   - `supabase-schema.sql`: Esquema principal do banco de dados
   - `supabase-schema-update.sql`: Versão modificada do esquema para aplicação segura
   - `update-schema.sql`: Scripts de atualização do esquema
+  - `supabase-rls-policies.sql`: Políticas de segurança para as tabelas principais
+  - `reviews-schema.sql`: Esquema para o sistema de avaliações e comentários
+  - `reviews-rls.sql`: Políticas de segurança para o sistema de avaliações
+  - `sync-progress-schema.sql`: Esquema para o sistema de sincronização de progresso
+  - `sync-progress-rls.sql`: Políticas de segurança para o sistema de progresso
 
 ### Configurações
 - `package.json`: Dependências e scripts
@@ -115,13 +126,14 @@ Este é um projeto de plataforma de cursos online desenvolvido com React, TypeSc
 - Lista de módulos e aulas
 - Informações do instrutor
 - Botão de matrícula
-- Visualização de progresso para alunos matriculados ✅
+- Visualização de progresso para alunos matriculados
+- Sistema de avaliações e comentários ✅
 
 **Pendências**:
-- Implementar avaliações e comentários
+- Implementar funcionalidades avançadas para revisões (reagir, responder)
 
 ### Criação de Cursos (`CreateCourse.tsx`)
-**Status**: Implementada ✅
+**Status**: Implementada
 **Funcionalidades**:
 - Formulário de criação de curso em três etapas:
   1. Informações básicas (título, descrição, categoria, imagem, duração, nível)
@@ -143,13 +155,14 @@ Este é um projeto de plataforma de cursos online desenvolvido com React, TypeSc
 - Implementar prévia do curso
 
 ### Autenticação (`Auth.tsx`)
-**Status**: Implementada
+**Status**: Implementada ✅
 **Funcionalidades**:
 - Login com email/senha
 - Cadastro de novos usuários
 - Recuperação de senha
 - Login persistente
 - Proteção de rotas com AuthGuard
+- Integração com react-router-dom para navegação
 
 **Pendências**:
 - Implementar login social (Google, GitHub)
@@ -162,7 +175,7 @@ Este é um projeto de plataforma de cursos online desenvolvido com React, TypeSc
 - Listagem de cursos matriculados
 - Acesso aos cursos criados (para instrutores)
 - Configurações da conta
-- Histórico de progresso ✅
+- Histórico de progresso
 
 **Pendências**:
 - Adicionar certificados
@@ -182,7 +195,7 @@ Este é um projeto de plataforma de cursos online desenvolvido com React, TypeSc
 ## Estado Atual dos Componentes
 
 ### Sistema de Progresso do Aluno
-**Status**: Implementado ✅
+**Status**: Implementado
 **Componentes principais**:
 - `ProgressContext.tsx`: Contexto global para gerenciar progresso
 - `CourseProgress.tsx`: Visualização do progresso em um curso
@@ -199,8 +212,24 @@ Este é um projeto de plataforma de cursos online desenvolvido com React, TypeSc
 - Visualização do progresso geral do curso e por módulo
 - Continuação de onde o aluno parou (posição no vídeo, última página no documento)
 
-### ContentEditor
+### Sistema de Avaliações e Comentários
 **Status**: Implementado ✅
+**Componentes principais**:
+- `ReviewForm.tsx`: Formulário para criar/editar avaliações
+- `ReviewItem.tsx`: Exibição de uma avaliação individual
+- `ReviewList.tsx`: Lista de avaliações com paginação e filtros
+- `StarRating.tsx`: Componente de classificação com estrelas
+
+**Funcionalidades**:
+- Criação, edição e exclusão de avaliações
+- Classificação de cursos de 1 a 5 estrelas
+- Comentários detalhados
+- Verificação de elegibilidade (apenas alunos matriculados podem avaliar)
+- Ordenação e filtragem de avaliações
+- Suporte para reações, denúncias e moderação
+
+### ContentEditor
+**Status**: Implementado
 **Funcionalidades**:
 - Editor de conteúdo para diferentes tipos (vídeo, texto, PDF, quiz)
 - Interface de abas para cada tipo de conteúdo
@@ -212,7 +241,7 @@ Este é um projeto de plataforma de cursos online desenvolvido com React, TypeSc
 - Implementar arrastar e soltar para reorganizar conteúdos
 
 ### VideoPlayer
-**Status**: Implementado ✅
+**Status**: Implementado
 **Funcionalidades**:
 - Reprodução de vídeos
 - Controles personalizados (play/pause, volume, tela cheia)
@@ -222,7 +251,7 @@ Este é um projeto de plataforma de cursos online desenvolvido com React, TypeSc
 - Interface amigável com indicadores de progresso
 
 ### TextPlayer
-**Status**: Implementado ✅
+**Status**: Implementado
 **Funcionalidades**:
 - Exibição de conteúdo formatado com Markdown
 - Rastreamento do progresso de leitura baseado na rolagem
@@ -230,7 +259,7 @@ Este é um projeto de plataforma de cursos online desenvolvido com React, TypeSc
 - Marcação automática como concluído ao ler o conteúdo
 
 ### QuizPlayer
-**Status**: Implementado ✅
+**Status**: Implementado
 **Funcionalidades**:
 - Suporte a diferentes tipos de questões (única escolha, múltipla escolha, verdadeiro/falso)
 - Avaliação automática
@@ -245,7 +274,7 @@ Este é um projeto de plataforma de cursos online desenvolvido com React, TypeSc
   - Configuração de respostas corretas para cada tipo de questão
 
 ### DocumentPlayer
-**Status**: Implementado ✅
+**Status**: Implementado
 **Funcionalidades**:
 - Visualização de PDFs diretamente no navegador
 - Controles de navegação de página
@@ -254,7 +283,7 @@ Este é um projeto de plataforma de cursos online desenvolvido com React, TypeSc
 - Salvamento da última página visualizada
 
 ### DocumentUploader
-**Status**: Implementado ✅
+**Status**: Implementado
 **Funcionalidades**:
 - Upload de documentos (PDF, DOCX)
 - Preview de documentos
@@ -263,7 +292,7 @@ Este é um projeto de plataforma de cursos online desenvolvido com React, TypeSc
 - Gerenciamento de documentos (download, exclusão)
 
 ### VideoUploader
-**Status**: Implementado ✅
+**Status**: Implementado
 **Funcionalidades**:
 - Upload de vídeos
 - Extração de thumbnail
@@ -271,7 +300,7 @@ Este é um projeto de plataforma de cursos online desenvolvido com React, TypeSc
 - Interface de upload com arrastar e soltar
 
 ### ImageUploader
-**Status**: Implementado ✅
+**Status**: Implementado
 **Funcionalidades**:
 - Upload de imagens
 - Preview de imagens
@@ -280,7 +309,7 @@ Este é um projeto de plataforma de cursos online desenvolvido com React, TypeSc
 - Recorte de imagem
 
 ### CategorySelector
-**Status**: Implementado ✅
+**Status**: Implementado
 **Funcionalidades**:
 - Seleção de categorias principais
 - Seleção de matérias específicas
@@ -304,6 +333,9 @@ Este é um projeto de plataforma de cursos online desenvolvido com React, TypeSc
 - **quiz_results**: Resultados de quiz
 - **quiz_answers**: Respostas às perguntas de quiz
 - **course_reviews**: Avaliações de cursos
+- **review_comments**: Comentários em avaliações
+- **review_reactions**: Reações às avaliações
+- **review_reports**: Denúncias de avaliações
 - **media_uploads**: Uploads de mídia
 
 ### Armazenamento
@@ -316,7 +348,7 @@ Este é um projeto de plataforma de cursos online desenvolvido com React, TypeSc
 ### Prioridade Alta
 1. **Implementar Sistema de Notificações**: Alertas para alunos sobre novas aulas, comentários, etc.
 2. **Melhorar o Editor de Conteúdo**: Adicionar rich text para conteúdo textual, aprimorar editor de quizzes.
-3. **Implementar Sistema de Avaliações e Comentários**: Permitir que alunos avaliem e comentem nos cursos.
+3. **Implementar Sistema de Avaliações e Comentários**: ✅ Concluído
 4. **Sincronização com Backend**: Integrar o sistema de progresso com o backend para persistência entre dispositivos.
 
 ### Prioridade Média
@@ -330,6 +362,14 @@ Este é um projeto de plataforma de cursos online desenvolvido com React, TypeSc
 3. **Integração com Fóruns de Discussão**: Espaço para discussão entre alunos e instrutores.
 
 ## Atualizações e Melhorias Recentes
+
+### Sistema de Avaliações e Comentários
+- **Implementação completa do sistema de avaliações de cursos**: ✅
+  - Criação do esquema de banco de dados para avaliações (reviews-schema.sql)
+  - Implementação de políticas de segurança RLS (reviews-rls.sql)
+  - Criação de componentes de UI para avaliações e comentários
+  - Integração com a página de detalhes do curso
+  - Funcionalidades de classificação, comentários, reações e relatórios
 
 ### Infraestrutura e Serviços
 - **Migração completa para Supabase Storage**: Substituição do Firebase Storage pelo Supabase Storage
@@ -345,14 +385,23 @@ Este é um projeto de plataforma de cursos online desenvolvido com React, TypeSc
   - Regras de segurança (RLS) para proteger dados de progresso do aluno
   - Funções e triggers para atualização automática de timestamps
 
+### Integração e Navegação
+- **Atualização da navegação**: Migração de Next.js para React Router DOM
+  - Substituição de `useRouter` por `useNavigate`
+  - Ajuste nas chamadas de navegação (de `router.push()` para `navigate()`)
+  - Atualização das importações e dependências relacionadas
+
 ### Correções de Bugs
 - **Tipagem em Componentes**: Resolução de problemas de tipagem e uso de 'any' em diversos componentes
 - **CategorySelector**: Correção de funcionalidades de seleção e interface
 - **ProgressContext**: Correção de referências de user.uid para user.id e ajuste de importações
 - **Upload de Mídia**: Resolução de problemas de CORS e correção de caminhos de arquivos que usavam "undefined" como userId
 - **Esquema de Banco de Dados**: Correção de erros de sintaxe em scripts SQL de sincronização
+- **Auth.tsx**: Correção na importação de toast (de @/components/ui/toaster para sonner)
+- **useMediaUpload.ts**: Correção no método deleteMediaByUrl e exportações
 
 ### Novas Funcionalidades
+- **Sistema de Avaliações**: Implementação completa do sistema de avaliações de cursos
 - **Editor de Quiz**: Implementação completa do editor para criar, editar e excluir perguntas com diferentes tipos de resposta
 - **Tratamento de Erros**: Adição de logs detalhados e tratamento de exceções para facilitar depuração
 - **Monitoramento de Progresso**: Aprimoramento no sistema de rastreamento de progresso de uploads e visualização de conteúdo
@@ -361,7 +410,7 @@ Este é um projeto de plataforma de cursos online desenvolvido com React, TypeSc
 ## Próximos Passos Atualizados
 
 ### Fase 1: Sistema de Avaliações e Feedback
-**Status**: Em andamento
+**Status**: ✅ Implementado
 **Tarefas**:
 - [x] Implementar modelo de dados para avaliações de cursos
 - [x] Criar componente de exibição de avaliações (ReviewItem)
@@ -429,3 +478,52 @@ Este é um projeto de plataforma de cursos online desenvolvido com React, TypeSc
 - **Gestão de sessão**: Tratamento correto da sessão do usuário para evitar problemas de autenticação
 - **Prevenção de erros**: Verificações mais robustas antes de realizar operações que exigem autenticação
 - **Consistência de dados**: Garantia de que os dados apresentados são atualizados após modificações
+- **Navegação aprimorada**: Migração de Next.js para React Router DOM para navegação consistente
+
+## Alterações SQL Recentes
+
+### Sistema de Avaliações
+Implementação de um sistema completo de avaliações e comentários, incluindo esquema de banco de dados e políticas de segurança. Estes arquivos foram adicionados na pasta `src/db`:
+
+1. **reviews-schema.sql**: Contém as tabelas para o sistema de avaliações:
+   - `course_reviews`: Armazena avaliações dos cursos
+   - `review_comments`: Comentários em avaliações
+   - `review_reactions`: Reações às avaliações (útil/não útil)
+   - `review_reports`: Denúncias de avaliações
+   - `course_review_metrics`: Métricas agregadas de avaliações
+
+2. **reviews-rls.sql**: Políticas de segurança para as tabelas de avaliações:
+   - Políticas para visualização, criação, atualização e exclusão de avaliações
+   - Políticas para gerenciamento de comentários
+   - Políticas para gerenciamento de reações
+   - Políticas para gerenciamento de denúncias
+
+### Sistema de Progresso do Aluno
+Implementação do sistema de sincronização de progresso do aluno:
+
+1. **sync-progress-schema.sql**: Esquema para o sistema de sincronização:
+   - `student_progress_sync`: Armazena o progresso do aluno em conteúdos
+   - `content_interactions`: Registra interações do aluno com conteúdos
+   - `sync_queue`: Fila para sincronização de operações offline
+   - `user_sessions`: Rastreamento de sessões para sincronização multi-dispositivo
+
+2. **sync-progress-rls.sql**: Políticas de segurança para as tabelas de sincronização:
+   - Políticas para garantir que usuários acessem apenas seu próprio progresso
+   - Permissões para instrutores visualizarem progresso dos alunos em seus cursos
+   - Proteção de dados de interação e fila de sincronização
+
+### Atualizações de Esquema
+Atualizações e melhorias nos esquemas existentes:
+
+1. **update-schema.sql**: Adições ao esquema principal:
+   - Tabela `media_uploads` para gerenciamento centralizado de uploads
+   - Índices para melhorar performance de consultas
+   - Funções e triggers para atualização automática de timestamps
+
+### Políticas de Segurança
+Atualização das políticas de segurança para todas as tabelas:
+
+1. **supabase-rls-policies.sql**: Políticas de segurança para tabelas principais:
+   - Políticas para cursos, módulos e aulas
+   - Políticas para matrículas
+   - Políticas para perfis de usuários
