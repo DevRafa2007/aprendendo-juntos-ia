@@ -391,7 +391,7 @@ export const ProgressProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       });
       
       // Registrar interação
-      const interactionType = completed ? 'complete' : 'progress';
+      const interactionType = completed ? 'complete' : 'view'; // Changed from 'progress' to 'view'
       await progressSyncService.trackInteraction({
         contentId: compositeContentId,
         interactionType,

@@ -1,61 +1,64 @@
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Session, User } from '@supabase/supabase-js';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ProfileType } from '@/hooks/useProfile';
 import { Json } from '@/integrations/supabase/types';
 
 interface AuthContextType {
-  session: Session | null;
   user: User | null;
+  session: Session | null;
   profile: ProfileType | null;
-  isLoading: boolean;
-  signUp: (email: string, password: string, data?: { name?: string }) => Promise<{ error: any | null }>;
-  signIn: (email: string, password: string) => Promise<{ error: any | null }>;
+  signIn: (email: string, password: string) => Promise<{
+    error: Error | null;
+    data: { user: User | null; session: Session | null } | null;
+  }>;
+  signUp: (email: string, password: string, username: string) => Promise<{
+    error: Error | null;
+    data: { user: User | null; session: Session | null } | null;
+  }>;
   signOut: () => Promise<void>;
-  refreshProfile: () => Promise<void>;
+  loading: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | null>(null);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [session, setSession] = useState<Session | null>(null);
+// Helper function to convert Json type to Record<string, string>
+function convertJsonToRecord(json: Json | null): Record<string, string> | null {
+  if (!json) return null;
+  
+  if (typeof json === 'object' && json !== null && !Array.isArray(json)) {
+    return json as Record<string, string>;
+  }
+  
+  return null;
+}
+
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<ProfileType | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Configurar o listener para mudanças de autenticação
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, currentSession) => {
-        console.log('Auth state changed:', event, currentSession?.user?.id);
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-        
-        if (currentSession?.user) {
-          // Usar setTimeout para evitar deadlocks
-          setTimeout(() => {
-            fetchProfile(currentSession.user.id);
-          }, 0);
-        } else {
-          setProfile(null);
-        }
-      }
-    );
+    // Set initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
 
-    // Verificar sessão atual
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      console.log('Initial session check:', currentSession?.user?.id);
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      
-      if (currentSession?.user) {
-        fetchProfile(currentSession.user.id);
-      } else {
-        setIsLoading(false);
-      }
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
     });
 
     return () => {
@@ -63,9 +66,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  useEffect(() => {
+    // Load user profile when user is set
+    if (user) {
+      fetchProfile(user.id);
+    } else {
+      setProfile(null);
+    }
+  }, [user]);
+
   const fetchProfile = async (userId: string) => {
     try {
-      console.log('Fetching profile data for user:', userId);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -73,123 +84,128 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (error) {
-        console.error('Error fetching profile:', error);
-        setIsLoading(false);
-        return;
+        throw error;
       }
 
-      console.log('Profile data loaded:', data);
-      // Convert data to ProfileType to ensure compatibility
-      const profileData: ProfileType = {
-        id: data.id,
-        name: data.name,
-        email: data.email,
-        avatar_url: data.avatar_url,
-        created_at: data.created_at,
-        updated_at: data.updated_at,
-        social_links: data.social_links
-      };
-      setProfile(profileData);
+      if (data) {
+        // Convert profile data to ProfileType
+        const profileData: ProfileType = {
+          id: data.id,
+          name: data.name,
+          email: data.email,
+          avatar_url: data.avatar_url,
+          created_at: data.created_at,
+          updated_at: data.updated_at,
+          // Convert Json to Record<string, string>
+          social_links: convertJsonToRecord(data.social_links)
+        };
+        setProfile(profileData);
+      }
     } catch (error) {
-      console.error('Exception when fetching profile:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const refreshProfile = async () => {
-    if (user) {
-      console.log('Refreshing profile for user:', user.id);
-      await fetchProfile(user.id);
-    }
-  };
-
-  const signUp = async (email: string, password: string, data?: { name?: string }) => {
-    try {
-      const { error } = await supabase.auth.signUp({ 
-        email, 
-        password,
-        options: {
-          data: {
-            name: data?.name
-          }
-        }
-      });
-      
-      if (error) {
-        toast({
-          variant: "destructive",
-          title: "Erro ao cadastrar",
-          description: error.message,
-        });
-        return { error };
-      }
-
-      toast({
-        title: "Cadastro realizado com sucesso",
-        description: "Verifique seu email para confirmar sua conta.",
-      });
-      
-      return { error: null };
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao cadastrar",
-        description: error.message,
-      });
-      return { error };
+      console.error('Error fetching user profile:', error);
     }
   };
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
       if (error) {
         toast({
-          variant: "destructive",
-          title: "Erro ao entrar",
+          title: 'Erro ao entrar',
           description: error.message,
+          variant: 'destructive',
         });
-        return { error };
+        return { error, data: null };
       }
 
       toast({
-        title: "Login realizado com sucesso",
-        description: "Bem-vindo(a) de volta!",
+        title: 'Login bem-sucedido',
+        description: 'Você está conectado agora',
       });
-      
-      return { error: null };
+
+      return { data, error: null };
     } catch (error: any) {
+      console.error('Error signing in:', error);
       toast({
-        variant: "destructive",
-        title: "Erro ao entrar",
+        title: 'Erro ao entrar',
         description: error.message,
+        variant: 'destructive',
       });
-      return { error };
+      return { error, data: null };
+    }
+  };
+
+  const signUp = async (email: string, password: string, username: string) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name: username,
+          },
+        },
+      });
+
+      if (error) {
+        toast({
+          title: 'Erro ao criar conta',
+          description: error.message,
+          variant: 'destructive',
+        });
+        return { error, data: null };
+      }
+
+      toast({
+        title: 'Conta criada com sucesso',
+        description: 'Verifique seu e-mail para confirmar o cadastro',
+      });
+
+      return { data, error: null };
+    } catch (error: any) {
+      console.error('Error signing up:', error);
+      toast({
+        title: 'Erro ao criar conta',
+        description: error.message,
+        variant: 'destructive',
+      });
+      return { error, data: null };
     }
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setProfile(null);
-    toast({
-      title: "Logout realizado com sucesso",
-      description: "Esperamos vê-lo em breve!",
-    });
+    try {
+      await supabase.auth.signOut();
+      toast({
+        title: 'Desconectado',
+        description: 'Você saiu da sua conta',
+      });
+    } catch (error: any) {
+      console.error('Error signing out:', error);
+      toast({
+        title: 'Erro ao sair',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
-    <AuthContext.Provider value={{
-      session,
-      user,
-      profile,
-      isLoading,
-      signUp,
-      signIn,
-      signOut,
-      refreshProfile
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        session,
+        profile,
+        signIn,
+        signUp,
+        signOut,
+        loading,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -197,8 +213,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };

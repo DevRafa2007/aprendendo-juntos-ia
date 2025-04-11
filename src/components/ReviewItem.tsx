@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -7,20 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ThumbsUp, ThumbsDown, Flag, MoreVertical, MessageSquare, Check, MoreHorizontal } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, Flag, MessageSquare, Check } from 'lucide-react';
 import StarRating from './StarRating';
-import { CourseReview, ReviewReaction } from '@/services/reviewService';
-import { reviewService } from '@/services/reviewService';
+import { CourseReview, reviewService } from '@/services/reviewService';
 import { useToast } from '@/components/ui/use-toast';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 
 interface ReviewItemProps {
   review: CourseReview;
@@ -81,7 +72,7 @@ const ReviewItem: React.FC<ReviewItemProps> = ({
           reactions: updatedReactions,
         });
       } 
-      // Caso contrário, adiciona ou atualiza a reação
+      // Otherwise, add or update the reaction
       else {
         await reviewService.addReaction(currentReview.id, currentUserId, reactionType);
         
@@ -285,24 +276,14 @@ const ReviewItem: React.FC<ReviewItemProps> = ({
                     Por que você está denunciando esta avaliação?
                   </p>
                   
-                  <div className="space-y-2">
+                  <RadioGroup value={reportReason} onValueChange={setReportReason}>
                     {['Conteúdo inapropriado', 'Spam', 'Informações falsas', 'Linguagem ofensiva', 'Outro'].map((reason) => (
-                      <div key={reason} className="flex items-center">
-                        <input
-                          type="radio"
-                          id={`reason-${reason}`}
-                          name="reason"
-                          value={reason}
-                          className="mr-2"
-                          checked={reportReason === reason}
-                          onChange={() => setReportReason(reason)}
-                        />
-                        <label htmlFor={`reason-${reason}`} className="text-sm">
-                          {reason}
-                        </label>
+                      <div key={reason} className="flex items-center space-x-2">
+                        <RadioGroupItem value={reason} id={`reason-${reason}`} />
+                        <Label htmlFor={`reason-${reason}`}>{reason}</Label>
                       </div>
                     ))}
-                  </div>
+                  </RadioGroup>
                   
                   <div className="flex justify-end gap-2 pt-2">
                     <Button

@@ -10,9 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -24,7 +22,7 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 import { useToast } from '@/components/ui/use-toast';
-import { Star, Filter, SlidersHorizontal, Plus } from 'lucide-react';
+import { Star, Filter, Plus } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -424,9 +422,6 @@ const ReviewList: React.FC<ReviewListProps> = ({ courseId, className }) => {
                   key={review.id}
                   review={review}
                   currentUserId={user?.id}
-                  onReviewClick={() => {
-                    // Implementar visualização detalhada da avaliação
-                  }}
                 />
               ))
             )}

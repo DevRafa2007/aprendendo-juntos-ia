@@ -15,6 +15,17 @@ export interface ProfileType {
   social_links?: Record<string, string> | null;
 }
 
+// Helper function to convert Json type to Record<string, string>
+function convertJsonToRecord(json: Json | null): Record<string, string> | null {
+  if (!json) return null;
+  
+  if (typeof json === 'object' && json !== null && !Array.isArray(json)) {
+    return json as Record<string, string>;
+  }
+  
+  return null;
+}
+
 export function useProfile(userId?: string) {
   const { user } = useAuth();
   const [profile, setProfile] = useState<ProfileType | null>(null);
@@ -56,7 +67,7 @@ export function useProfile(userId?: string) {
           created_at: data.created_at,
           updated_at: data.updated_at,
           // Convert Json to Record<string, string>
-          social_links: data.social_links ? data.social_links as Record<string, string> : null
+          social_links: convertJsonToRecord(data.social_links)
         };
         setProfile(profileData);
       } catch (error: any) {
@@ -117,14 +128,14 @@ export function useProfile(userId?: string) {
         created_at: data.created_at,
         updated_at: data.updated_at,
         // Convert Json to Record<string, string>
-        social_links: data.social_links ? data.social_links as Record<string, string> : null
+        social_links: convertJsonToRecord(data.social_links)
       };
       setProfile(profileData);
       toast({
         title: "Perfil atualizado",
         description: "Seu perfil foi atualizado com sucesso!"
       });
-      return { data, error: null };
+      return { data: profileData, error: null };
     } catch (error: any) {
       console.error('Error in profile update:', error);
       return { data: null, error };

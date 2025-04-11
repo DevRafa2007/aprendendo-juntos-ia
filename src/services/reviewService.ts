@@ -1,5 +1,5 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 import { Json } from '@/integrations/supabase/types';
 
 // Extended types for reviews and related entities with additional fields needed by UI
@@ -8,18 +8,18 @@ export interface CourseReview {
   course_id: string;
   user_id: string;
   rating: number;
-  title: string; // Added field required by UI
+  title: string;
   comment: string;
   created_at: string;
   updated_at: string;
-  is_verified?: boolean; // Added field required by UI
-  is_featured?: boolean; // Added field required by UI
-  user?: { // Added field required by UI
+  is_verified?: boolean;
+  is_featured?: boolean;
+  user?: {
     id: string;
     full_name?: string;
     avatar_url?: string;
   };
-  reactions?: ReviewReaction[]; // Added field required by UI
+  reactions?: ReviewReaction[];
 }
 
 export interface ReviewReaction {
@@ -65,14 +65,14 @@ export interface CourseReviewInsert {
 }
 
 // Type for inserting new comment
-export type ReviewCommentInsert = {
+export interface ReviewCommentInsert {
   review_id: string;
   user_id: string;
   parent_id?: string;
   comment: string;
-};
+}
 
-// Type for reações
+// Type for reactions
 export type ReactionType = 'helpful' | 'unhelpful';
 
 // Type for filtering and sorting reviews
@@ -121,25 +121,43 @@ class ReviewService {
    * Gets a specific review by ID
    */
   async getReviewById(reviewId: string): Promise<CourseReview | null> {
-    const { data, error } = await supabase
-      .from('course_reviews')
-      .select(`
-        *,
-        user:profiles(id, name:full_name, avatar_url),
-        reactions:review_reactions(id, user_id, reaction_type)
-      `)
-      .eq('id', reviewId)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('course_reviews')
+        .select(`
+          *,
+          user:profiles(id, full_name, avatar_url)
+        `)
+        .eq('id', reviewId)
+        .single();
 
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return null; // Not found
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return null; // Not found
+        }
+        console.error('Error fetching review:', error);
+        throw error;
       }
-      console.error('Error fetching review:', error);
-      throw new Error(`Failed to fetch review: ${error.message}`);
-    }
 
-    return data as CourseReview;
+      // Get reactions separately since review_reactions is not in the default schema
+      const { data: reactions, error: reactionsError } = await supabase
+        .from('review_reactions')
+        .select('*')
+        .eq('review_id', reviewId);
+
+      if (reactionsError) {
+        console.error('Error fetching reactions:', reactionsError);
+      }
+
+      return {
+        ...data,
+        user: data.user,
+        reactions: reactions || []
+      } as CourseReview;
+    } catch (error) {
+      console.error('Error in getReviewById:', error);
+      return null;
+    }
   }
 
   /**
@@ -201,8 +219,7 @@ class ReviewService {
         .from('course_reviews')
         .select(`
           *,
-          user:profiles(id, full_name, avatar_url),
-          reactions:review_reactions(id, user_id, reaction_type)
+          user:profiles(id, full_name, avatar_url)
         `, { count: 'exact' })
         .eq('course_id', courseId);
 
@@ -221,7 +238,8 @@ class ReviewService {
       } else if (sortBy === 'rating') {
         query = query.order('rating', { ascending: sortOrder === 'asc' });
       } else if (sortBy === 'helpful') {
-        // This would ideally be a more complex query that counts helpful reactions
+        // This would ideally use a more complex query that counts helpful reactions
+        // For now, we'll just sort by date
         query = query.order('created_at', { ascending: false });
       }
 
@@ -236,11 +254,38 @@ class ReviewService {
         throw error;
       }
 
+      // Fetch reactions for these reviews
+      const reviewIds = data.map(review => review.id);
+      
+      let reactions: any[] = [];
+      if (reviewIds.length > 0) {
+        // Get all reactions for these reviews in a single query
+        const { data: reactionsData, error: reactionsError } = await supabase
+          .from('review_reactions')
+          .select('*')
+          .in('review_id', reviewIds);
+  
+        if (reactionsError) {
+          console.error('Error fetching reactions:', reactionsError);
+        } else {
+          reactions = reactionsData || [];
+        }
+      }
+
+      // Combine reviews with their reactions
+      const reviewsWithReactions = data.map(review => {
+        const reviewReactions = reactions.filter(r => r.review_id === review.id);
+        return {
+          ...review,
+          reactions: reviewReactions
+        };
+      });
+
       // Calculate total pages
       const totalPages = count ? Math.ceil(count / limit) : 0;
 
       return {
-        data: data as CourseReview[],
+        data: reviewsWithReactions as CourseReview[],
         total: count || 0,
         page,
         limit,
@@ -257,8 +302,7 @@ class ReviewService {
    */
   async getCourseReviewMetrics(courseId: string): Promise<CourseReviewMetrics | null> {
     try {
-      // This would typically be provided by a dedicated view or function
-      // For now, we'll calculate metrics on the fly
+      // Calculate metrics on the fly
       const { data: reviews, error, count } = await supabase
         .from('course_reviews')
         .select('rating', { count: 'exact' })
@@ -293,7 +337,7 @@ class ReviewService {
       return {
         course_id: courseId,
         total_reviews: count || reviews.length,
-        avg_rating,
+        avg_rating: avgRating,
         rating_counts: ratingCounts,
         last_updated: new Date().toISOString()
       };
@@ -311,10 +355,7 @@ class ReviewService {
       const { data: comment, error } = await supabase
         .from('review_comments')
         .insert(data)
-        .select(`
-          *,
-          user:profiles(id, name, avatar_url)
-        `)
+        .select('*, user:profiles(id, name, avatar_url)')
         .single();
 
       if (error) {
@@ -336,10 +377,7 @@ class ReviewService {
     try {
       const { data, error } = await supabase
         .from('review_comments')
-        .select(`
-          *,
-          user:profiles(id, name, avatar_url)
-        `)
+        .select('*, user:profiles(id, name, avatar_url)')
         .eq('review_id', reviewId)
         .is('parent_id', null) // Only root comments
         .order('created_at', { ascending: true });
