@@ -10,6 +10,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: ProfileType | null;
+  isLoading: boolean; // Add this property
   signIn: (email: string, password: string) => Promise<{
     error: Error | null;
     data: { user: User | null; session: Session | null } | null;
@@ -19,7 +20,7 @@ interface AuthContextType {
     data: { user: User | null; session: Session | null } | null;
   }>;
   signOut: () => Promise<void>;
-  loading: boolean;
+  refreshProfile: () => Promise<void>; // Add this method
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -43,7 +44,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<ProfileType | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -51,14 +52,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      setLoading(false);
+      setIsLoading(false);
     });
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
-      setLoading(false);
+      setIsLoading(false);
     });
 
     return () => {
@@ -103,6 +104,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
+    }
+  };
+
+  const refreshProfile = async () => {
+    if (user) {
+      await fetchProfile(user.id);
     }
   };
 
@@ -203,7 +210,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         signIn,
         signUp,
         signOut,
-        loading,
+        isLoading,
+        refreshProfile,
       }}
     >
       {children}

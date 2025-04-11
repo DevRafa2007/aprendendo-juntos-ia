@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { uploadImage, uploadDocument, deleteMediaByUrl } from '@/services/mediaService';
@@ -53,7 +54,7 @@ export function useMediaUpload(options: UseMediaUploadOptions = {}): UseMediaUpl
    * Faz o upload de um arquivo
    */
   const uploadFile = useCallback(async (file: File): Promise<string | null> => {
-    if (!user?.uid) {
+    if (!user?.id) {
       const authError = new Error('Usuário não autenticado');
       setError('Usuário não autenticado. Faça login para continuar.');
       onError?.(authError);
@@ -93,13 +94,19 @@ export function useMediaUpload(options: UseMediaUploadOptions = {}): UseMediaUpl
     try {
       // Determina qual função de upload usar baseado no tipo do arquivo
       const isImage = file.type.startsWith('image/');
-      const uploadFunction = isImage ? uploadImage : uploadDocument;
-
-      // Faz o upload
-      const url = await uploadFunction(file, user.uid, {
-        onProgress: setProgress,
-        customPath,
-      });
+      
+      let url = '';
+      if (isImage) {
+        url = await uploadImage(file, user.id, {
+          onProgress: setProgress,
+          customPath,
+        });
+      } else {
+        url = await uploadDocument(file, user.id, {
+          onProgress: setProgress,
+          customPath,
+        });
+      }
 
       setMediaUrl(url);
       setIsUploading(false);
@@ -167,4 +174,4 @@ export function useMediaUpload(options: UseMediaUploadOptions = {}): UseMediaUpl
   };
 }
 
-export default useMediaUpload; 
+export default useMediaUpload;

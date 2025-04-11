@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,7 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import { ProgressProvider } from "./contexts/ProgressContext";
 import { useEffect } from "react";
-import { initializeStorageBuckets } from "@/services/mediaService";
+import mediaService from "@/services/mediaService";
 import AuthGuard from "@/components/AuthGuard";
 import Index from "./pages/Index";
 import Courses from "./pages/Courses";
@@ -27,7 +28,7 @@ const InitializeServices = () => {
     const initServices = async () => {
       try {
         console.log("Ambiente de desenvolvimento detectado, configurando buckets...");
-        await initializeStorageBuckets();
+        await mediaService.initializeStorageBuckets();
       } catch (error) {
         console.error("Erro crítico ao inicializar buckets de armazenamento:", error);
         alert("Erro ao configurar armazenamento. Alguns recursos de upload podem não funcionar corretamente. Consulte o console para mais detalhes.");

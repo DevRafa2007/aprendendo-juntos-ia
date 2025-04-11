@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -13,7 +12,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Clock, Award, BookOpen, CheckCircle, Play } from 'lucide-react';
-import { getCorrectMediaUrl } from '@/services/mediaService';
+import mediaService from '@/services/mediaService';
 
 interface CourseProgressCardProps {
   course: {
@@ -44,7 +43,10 @@ const CourseProgressCard: React.FC<CourseProgressCardProps> = ({
 }) => {
   const [imageError, setImageError] = useState(false);
   
-  // Status colorido com base no progresso
+  const imageUrl = course.image_url 
+    ? mediaService.getCorrectMediaUrl(course.image_url) 
+    : 'https://via.placeholder.com/300';
+  
   const getStatusBadge = () => {
     if (completed) {
       return (
@@ -86,7 +88,6 @@ const CourseProgressCard: React.FC<CourseProgressCardProps> = ({
     );
   };
   
-  // Formata a data de último acesso
   const formatLastAccessed = () => {
     if (!lastAccessed) return 'Nunca acessado';
     
@@ -101,9 +102,9 @@ const CourseProgressCard: React.FC<CourseProgressCardProps> = ({
   return (
     <Card className="h-full flex flex-col overflow-hidden hover:shadow-md transition-shadow">
       <div className="aspect-video relative overflow-hidden bg-muted">
-        {course.image_url && !imageError ? (
+        {imageUrl && !imageError ? (
           <img
-            src={getCorrectMediaUrl(course.image_url)}
+            src={imageUrl}
             alt={course.title}
             className="object-cover w-full h-full"
             onError={() => setImageError(true)}

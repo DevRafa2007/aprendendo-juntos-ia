@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { deleteMediaByUrl } from '@/services/mediaService';
+import mediaService from '@/services/mediaService';
 import { 
   Module, 
   Content, 
@@ -208,11 +208,11 @@ export function useCourseContents() {
       if (contents && contents.length > 0) {
         for (const content of contents) {
           if (content.type === 'video' && content.content_videos?.video_url) {
-            await deleteMediaByUrl(content.content_videos.video_url);
+            await mediaService.deleteMediaByUrl(content.content_videos.video_url);
           }
           
           if (content.type === 'pdf' && content.content_pdfs?.file_url) {
-            await deleteMediaByUrl(content.content_pdfs.file_url);
+            await mediaService.deleteMediaByUrl(content.content_pdfs.file_url);
           }
         }
       }
@@ -772,7 +772,7 @@ export function useCourseContents() {
           .single();
           
         if (data?.video_url) {
-          await deleteMediaByUrl(data.video_url);
+          await mediaService.deleteMediaByUrl(data.video_url);
         }
       }
       
@@ -784,7 +784,7 @@ export function useCourseContents() {
           .single();
           
         if (data?.file_url) {
-          await deleteMediaByUrl(data.file_url);
+          await mediaService.deleteMediaByUrl(data.file_url);
         }
       }
       
@@ -887,4 +887,4 @@ export function useCourseContents() {
     deleteContent,
     reorderContents
   };
-} 
+}

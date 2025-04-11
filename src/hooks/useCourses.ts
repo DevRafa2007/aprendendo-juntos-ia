@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { deleteMediaByUrl } from '@/services/mediaService';
+import mediaService from '@/services/mediaService';
 
 export interface CourseType {
   id: string;
@@ -295,7 +295,7 @@ export function useCourses() {
       
       // Se houver uma imagem associada, tenta deletá-la
       if (course?.image_url) {
-        await deleteMediaByUrl(course.image_url);
+        await mediaService.deleteMediaByUrl(course.image_url);
       }
       
       // Finalmente, deleta o curso

@@ -18,7 +18,7 @@ import { useEnrollment } from '@/hooks/useEnrollment';
 import { useAuth } from '@/context/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
 import { useToast } from '@/hooks/use-toast';
-import { getCorrectMediaUrl } from '@/services/mediaService';
+import mediaService from '@/services/mediaService';
 
 interface InstructorInfo {
   id: string;
@@ -103,7 +103,6 @@ const CourseDetail = () => {
       try {
         console.log('Tentando carregar curso:', courseId);
         
-        // Carrega os detalhes do curso
         const { data: courseData, error } = await fetchCourseById(courseId);
         
         if (error) {
@@ -131,7 +130,15 @@ const CourseDetail = () => {
         console.log('Curso carregado com sucesso:', courseData);
         setCourse(courseData);
         
-        // Carrega o conteúdo do curso (módulos e aulas)
+        const imageUrl = courseData?.image_url 
+          ? mediaService.getCorrectMediaUrl(courseData.image_url) 
+          : '/placeholder.svg';
+        
+        setCourse({
+          ...courseData,
+          image_url: imageUrl
+        });
+        
         try {
           const { data: contentData } = await fetchCourseContent(courseId);
           if (contentData) {
@@ -142,8 +149,6 @@ const CourseDetail = () => {
           // Continua mesmo se o conteúdo falhar
         }
         
-        // Busca o instrutor
-        // Implementação simulada - em produção, buscaria no banco de dados
         setInstructor({
           id: courseData.instructor_id,
           name: 'Nome do Instrutor', // Substituir por busca real
@@ -151,7 +156,6 @@ const CourseDetail = () => {
           email: 'instrutor@exemplo.com' // Substituir por busca real
         });
         
-        // Verifica status de inscrição
         if (user) {
           try {
             const { isEnrolled, enrollmentData } = await checkEnrollment(courseId);
@@ -247,7 +251,6 @@ const CourseDetail = () => {
     return courseContent.reduce((total, module) => total + module.lessons.length, 0);
   };
   
-  // Verifica se é o instrutor do curso
   const isInstructor = user && course && user.id === course.instructor_id;
   
   if (isLoading) {
@@ -286,7 +289,6 @@ const CourseDetail = () => {
     <div className="min-h-screen flex flex-col">
       <Navbar />
       <main className="flex-grow">
-        {/* Header da página */}
         <div className="bg-gradient-to-r from-brand-blue to-brand-green text-white py-8">
           <div className="container mx-auto px-4">
             <div className="flex items-center mb-8">
@@ -312,10 +314,9 @@ const CourseDetail = () => {
                     {course.level}
                   </Badge>
                 </div>
-                  </div>
-                </div>
-                
-            {/* Status de inscrição ou botão de inscrição */}
+              </div>
+            </div>
+            
             {enrollmentStatus.isEnrolled ? (
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
                 <div className="flex flex-col md:flex-row md:items-center justify-between">
@@ -351,15 +352,13 @@ const CourseDetail = () => {
               >
                 <BookOpen className="mr-2 h-5 w-5" />
                 Inscrever-se neste Curso
-                        </Button>
-                      )}
-                        </div>
-                      </div>
+              </Button>
+            )}
+          </div>
+        </div>
 
-        {/* Conteúdo principal */}
         <div className="container mx-auto px-4 py-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Coluna principal */}
             <div className="lg:col-span-2">
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="mb-6">
@@ -369,7 +368,6 @@ const CourseDetail = () => {
                   <TabsTrigger value="instrutor">Instrutor</TabsTrigger>
                 </TabsList>
                 
-                {/* Tab de Conteúdo */}
                 <TabsContent value="conteudo" className="mt-0">
                   <Card>
                     <CardHeader>
@@ -388,14 +386,14 @@ const CourseDetail = () => {
                                   <span className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-sm mr-3">
                                     {index + 1}
                                   </span>
-                  <div>
+                                  <div>
                                     <p className="font-medium">{module.title}</p>
                                     <p className="text-sm text-muted-foreground mt-1">
                                       {module.lessons.length} aulas
                                     </p>
-                              </div>
-                            </div>
-                          </AccordionTrigger>
+                                  </div>
+                                </div>
+                              </AccordionTrigger>
                               <AccordionContent>
                                 <div className="pl-10 space-y-2 mt-2">
                                   {module.lessons.map((lesson, lessonIndex) => {
@@ -413,7 +411,7 @@ const CourseDetail = () => {
                                             <div className="text-sm text-muted-foreground">
                                               {lessonIndex + 1}.
                                             </div>
-                                    <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-2">
                                               {icons[lesson.content_type as keyof typeof icons]}
                                               <span>{lesson.title}</span>
                                             </div>
@@ -426,26 +424,25 @@ const CourseDetail = () => {
                                               {lesson.content_type === 'text' && <FileText className="h-4 w-4" />}
                                               {lesson.content_type === 'quiz' && <FileCheck className="h-4 w-4" />}
                                             </Button>
-                                      )}
-                                    </div>
-                                  </div>
+                                          )}
+                                        </div>
+                                      </div>
                                     );
                                   })}
-                            </div>
-                          </AccordionContent>
-                        </AccordionItem>
+                                </div>
+                              </AccordionContent>
+                            </AccordionItem>
                           ))
                         ) : (
                           <div className="py-4 text-center text-muted-foreground">
                             <p>Ainda não há conteúdo disponível para este curso.</p>
                           </div>
                         )}
-                    </Accordion>
+                      </Accordion>
                     </CardContent>
                   </Card>
                 </TabsContent>
                 
-                {/* Tab Sobre o Curso */}
                 <TabsContent value="sobre" className="mt-0">
                   <Card>
                     <CardHeader>
@@ -482,12 +479,11 @@ const CourseDetail = () => {
                             <span>Nenhum conhecimento prévio necessário</span>
                           </li>
                         </ul>
-                            </div>
-                          </CardContent>
-                        </Card>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </TabsContent>
                 
-                {/* Tab Avaliações */}
                 <TabsContent value="avaliacoes" className="mt-0">
                   <Card>
                     <CardHeader>
@@ -504,7 +500,6 @@ const CourseDetail = () => {
                   </Card>
                 </TabsContent>
                 
-                {/* Tab do Instrutor */}
                 <TabsContent value="instrutor" className="mt-0">
                   <Card>
                     <CardHeader>
@@ -516,24 +511,23 @@ const CourseDetail = () => {
                           <AvatarImage src={instructor?.avatar_url || ''} alt={instructor?.name} />
                           <AvatarFallback className="text-2xl">
                             {instructor?.name?.charAt(0) || 'I'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
                           <h3 className="text-xl font-semibold mb-2">{instructor?.name}</h3>
                           <p className="text-muted-foreground mb-4">{instructor?.email}</p>
                           <p className="mb-4">
                             Biografia do instrutor não disponível.
                           </p>
                           <Button variant="outline">Ver perfil completo</Button>
-                    </div>
-                          </div>
-                        </CardContent>
-                      </Card>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </TabsContent>
               </Tabs>
             </div>
             
-            {/* Sidebar */}
             <div>
               <div className="sticky top-8">
                 <Card>
@@ -541,11 +535,10 @@ const CourseDetail = () => {
                     <CardTitle className="text-xl">Detalhes do Curso</CardTitle>
                   </CardHeader>
                   <CardContent className="pb-3">
-                    {/* Imagem do curso com fallback */}
                     <div className="w-full h-40 overflow-hidden rounded-md mb-4 bg-muted/30 relative">
                       {course.image_url ? (
                         <img 
-                          src={getCorrectMediaUrl(course.image_url)} 
+                          src={mediaService.getCorrectMediaUrl(course.image_url)} 
                           alt={course.title} 
                           className="w-full h-full object-cover"
                           onError={(e) => {
@@ -644,7 +637,7 @@ const CourseDetail = () => {
                     )}
                   </CardFooter>
                 </Card>
-                  </div>
+              </div>
             </div>
           </div>
         </div>
