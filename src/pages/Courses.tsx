@@ -1,8 +1,8 @@
-
 import React, { useState } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import CourseCard, { CourseProps } from '@/components/CourseCard';
+import SubjectCard from '@/components/SubjectCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
@@ -12,11 +12,14 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { subjects, getSubjectsByCategory, initializedCategories } from '@/lib/categories';
 
 const Courses = () => {
   // Estado dos filtros
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [selectedDurations, setSelectedDurations] = useState<string[]>([]);
   const [selectedPriceRange, setSelectedPriceRange] = useState([0, 300]);
   const [showFilters, setShowFilters] = useState(false);
@@ -173,6 +176,66 @@ const Courses = () => {
       price: 289.90,
       slug: 'marketing-digital-avancado-conversao',
     },
+    // Adicionando cursos com matérias escolares
+    {
+      id: '13',
+      title: 'Matemática Básica: Fundamentos para o Ensino Médio',
+      category: 'Matérias Escolares',
+      categorySlug: 'materias-escolares',
+      subject: 'Matemática',
+      subjectSlug: 'matematica',
+      image: 'https://picsum.photos/id/33/600/400',
+      instructor: 'Carlos Eduardo Pereira',
+      duration: '20h',
+      completionTime: '45 dias',
+      isFree: false,
+      price: 89.90,
+      slug: 'matematica-basica-ensino-medio',
+    },
+    {
+      id: '14',
+      title: 'Física para o ENEM: Mecânica e Cinemática',
+      category: 'Matérias Escolares',
+      categorySlug: 'materias-escolares',
+      subject: 'Física',
+      subjectSlug: 'fisica',
+      image: 'https://picsum.photos/id/34/600/400',
+      instructor: 'Ana Carla Silva',
+      duration: '18h',
+      completionTime: '40 dias',
+      isFree: false,
+      price: 79.90,
+      slug: 'fisica-enem-mecanica-cinematica',
+    },
+    {
+      id: '15',
+      title: 'Redação para Vestibular: Como atingir nota máxima',
+      category: 'Matérias Escolares',
+      categorySlug: 'materias-escolares',
+      subject: 'Redação',
+      subjectSlug: 'redacao',
+      image: 'https://picsum.photos/id/35/600/400',
+      instructor: 'Paulo Ricardo Gomes',
+      duration: '15h',
+      completionTime: '30 dias',
+      isFree: false,
+      price: 99.90,
+      slug: 'redacao-vestibular-nota-maxima',
+    },
+    {
+      id: '16',
+      title: 'Geografia do Brasil: Regiões e características',
+      category: 'Matérias Escolares',
+      categorySlug: 'materias-escolares',
+      subject: 'Geografia',
+      subjectSlug: 'geografia',
+      image: 'https://picsum.photos/id/36/600/400',
+      instructor: 'Roberto Carlos Mendes',
+      duration: '12h',
+      completionTime: '25 dias',
+      isFree: true,
+      slug: 'geografia-brasil-regioes',
+    },
   ];
 
   // Filtrar cursos com base nos filtros selecionados
@@ -181,13 +244,19 @@ const Courses = () => {
     if (
       searchQuery &&
       !course.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
-      !course.category.toLowerCase().includes(searchQuery.toLowerCase())
+      !course.category.toLowerCase().includes(searchQuery.toLowerCase()) &&
+      !(course.subject && course.subject.toLowerCase().includes(searchQuery.toLowerCase()))
     ) {
       return false;
     }
 
     // Filtro de categorias
     if (selectedCategories.length > 0 && !selectedCategories.includes(course.category)) {
+      return false;
+    }
+    
+    // Filtro de matérias
+    if (selectedSubjects.length > 0 && (!course.subject || !selectedSubjects.includes(course.subject))) {
       return false;
     }
 
@@ -222,7 +291,7 @@ const Courses = () => {
   });
 
   // Categorias disponíveis para filtrar
-  const categories = ['Tecnologia', 'Negócios', 'Marketing', 'Educação', 'Inovação', 'Legislação', 'Mercado e Vendas'];
+  const categories = ['Tecnologia', 'Negócios', 'Marketing', 'Educação', 'Inovação', 'Legislação', 'Mercado e Vendas', 'Matérias Escolares'];
   
   // Opções de duração para filtrar
   const durations = ['Menos de 5h', '5h - 20h', '20h - 40h', 'Mais de 40h'];
@@ -235,6 +304,15 @@ const Courses = () => {
       setSelectedCategories([...selectedCategories, category]);
     }
   };
+  
+  // Toggle da matéria no filtro
+  const toggleSubject = (subject: string) => {
+    if (selectedSubjects.includes(subject)) {
+      setSelectedSubjects(selectedSubjects.filter(s => s !== subject));
+    } else {
+      setSelectedSubjects([...selectedSubjects, subject]);
+    }
+  };
 
   // Toggle da duração no filtro
   const toggleDuration = (duration: string) => {
@@ -245,19 +323,21 @@ const Courses = () => {
     }
   };
 
-  // Limpar todos os filtros
+  // Função para limpar todos os filtros
   const clearAllFilters = () => {
     setSearchQuery('');
     setSelectedCategories([]);
+    setSelectedSubjects([]);
     setSelectedDurations([]);
     setSelectedPriceRange([0, 300]);
   };
 
-  // Verificar se existem filtros ativos
+  // Verificar se há filtros ativos
   const hasActiveFilters = () => {
     return (
-      searchQuery !== '' ||
+      searchQuery.trim() !== '' ||
       selectedCategories.length > 0 ||
+      selectedSubjects.length > 0 ||
       selectedDurations.length > 0 ||
       selectedPriceRange[0] > 0 ||
       selectedPriceRange[1] < 300
@@ -301,6 +381,69 @@ const Courses = () => {
           </div>
         </section>
 
+        {/* Seção de navegação por matérias escolares */}
+        <section className="py-12 bg-muted/30">
+          <div className="container mx-auto px-4">
+            <h2 className="text-2xl font-bold mb-8">Matérias Escolares</h2>
+            
+            <Tabs defaultValue="popular">
+              <div className="flex justify-between items-center mb-6">
+                <TabsList>
+                  <TabsTrigger value="popular">Mais Populares</TabsTrigger>
+                  <TabsTrigger value="exatas">Exatas</TabsTrigger>
+                  <TabsTrigger value="humanas">Humanas</TabsTrigger>
+                  <TabsTrigger value="linguagens">Linguagens</TabsTrigger>
+                  <TabsTrigger value="ciencias">Ciências</TabsTrigger>
+                </TabsList>
+                
+                <Button variant="link" className="text-brand-blue">
+                  Ver todas as matérias
+                </Button>
+              </div>
+              
+              <TabsContent value="popular" className="mt-0">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {subjects.slice(0, 8).map((subject) => (
+                    <SubjectCard key={subject.id} subject={subject} />
+                  ))}
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="exatas" className="mt-0">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {subjects.filter(s => ['matematica', 'algebra', 'geometria', 'estatistica', 'fisica'].includes(s.slug)).map((subject) => (
+                    <SubjectCard key={subject.id} subject={subject} />
+                  ))}
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="humanas" className="mt-0">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {subjects.filter(s => ['historia', 'geografia', 'filosofia', 'sociologia'].includes(s.slug)).map((subject) => (
+                    <SubjectCard key={subject.id} subject={subject} />
+                  ))}
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="linguagens" className="mt-0">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {subjects.filter(s => ['lingua-portuguesa', 'gramatica', 'redacao', 'literatura', 'ingles', 'espanhol'].includes(s.slug)).map((subject) => (
+                    <SubjectCard key={subject.id} subject={subject} />
+                  ))}
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="ciencias" className="mt-0">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {subjects.filter(s => ['biologia', 'quimica', 'fisica'].includes(s.slug)).map((subject) => (
+                    <SubjectCard key={subject.id} subject={subject} />
+                  ))}
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </section>
+
         <div className="container mx-auto px-4 py-8">
           {/* Filtros e resultados */}
           <div className="flex flex-col lg:flex-row gap-8">
@@ -320,22 +463,19 @@ const Courses = () => {
 
               {showFilters && (
                 <div className="bg-card border border-border rounded-lg p-4 mb-4">
-                  {/* Filtro de categorias */}
-                  <div className="mb-6">
-                    <h3 className="font-semibold mb-3 flex items-center gap-2">
-                      <BookOpen className="h-4 w-4" />
-                      Categorias
-                    </h3>
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Categorias</h3>
                     <div className="space-y-2">
                       {categories.map((category) => (
-                        <div key={category} className="flex items-center gap-2">
-                          <Checkbox
+                        <div key={category} className="flex items-center">
+                          <Checkbox 
                             id={`category-${category}`}
                             checked={selectedCategories.includes(category)}
                             onCheckedChange={() => toggleCategory(category)}
+                            className="mr-2"
                           />
                           <label 
-                            htmlFor={`category-${category}`}
+                            htmlFor={`category-${category}`} 
                             className="text-sm cursor-pointer"
                           >
                             {category}
@@ -344,13 +484,34 @@ const Courses = () => {
                       ))}
                     </div>
                   </div>
+                  
+                  {/* Filtro de matérias escolares - só aparece quando a categoria está selecionada */}
+                  {selectedCategories.includes('Matérias Escolares') && (
+                    <div className="mt-6">
+                      <h3 className="text-lg font-semibold mb-3">Matérias Escolares</h3>
+                      <div className="space-y-2 max-h-60 overflow-auto pr-2">
+                        {subjects.map((subject) => (
+                          <div key={subject.id} className="flex items-center">
+                            <Checkbox
+                              id={`subject-${subject.id}`}
+                              checked={selectedSubjects.includes(subject.name)}
+                              onCheckedChange={() => toggleSubject(subject.name)}
+                              className="mr-2"
+                            />
+                            <label
+                              htmlFor={`subject-${subject.id}`}
+                              className="text-sm cursor-pointer"
+                            >
+                              {subject.name}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-                  {/* Filtro de duração */}
-                  <div className="mb-6">
-                    <h3 className="font-semibold mb-3 flex items-center gap-2">
-                      <Clock className="h-4 w-4" />
-                      Duração
-                    </h3>
+                  <div className="mt-6">
+                    <h3 className="text-lg font-semibold mb-3">Duração</h3>
                     <div className="space-y-2">
                       {durations.map((duration) => (
                         <div key={duration} className="flex items-center gap-2">
@@ -412,22 +573,19 @@ const Courses = () => {
               <div className="bg-card border border-border rounded-lg p-5 sticky top-20">
                 <h2 className="font-bold text-lg mb-5">Filtros</h2>
 
-                {/* Filtro de categorias */}
-                <div className="mb-6">
-                  <h3 className="font-semibold mb-3 flex items-center gap-2">
-                    <BookOpen className="h-4 w-4" />
-                    Categorias
-                  </h3>
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Categorias</h3>
                   <div className="space-y-2">
                     {categories.map((category) => (
-                      <div key={category} className="flex items-center gap-2">
-                        <Checkbox
-                          id={`category-desktop-${category}`}
+                      <div key={category} className="flex items-center">
+                        <Checkbox 
+                          id={`category-${category}`}
                           checked={selectedCategories.includes(category)}
                           onCheckedChange={() => toggleCategory(category)}
+                          className="mr-2"
                         />
                         <label 
-                          htmlFor={`category-desktop-${category}`}
+                          htmlFor={`category-${category}`} 
                           className="text-sm cursor-pointer"
                         >
                           {category}
@@ -436,13 +594,34 @@ const Courses = () => {
                     ))}
                   </div>
                 </div>
+                
+                {/* Filtro de matérias escolares - só aparece quando a categoria está selecionada */}
+                {selectedCategories.includes('Matérias Escolares') && (
+                  <div className="mt-6">
+                    <h3 className="text-lg font-semibold mb-3">Matérias Escolares</h3>
+                    <div className="space-y-2 max-h-60 overflow-auto pr-2">
+                      {subjects.map((subject) => (
+                        <div key={subject.id} className="flex items-center">
+                          <Checkbox
+                            id={`subject-${subject.id}`}
+                            checked={selectedSubjects.includes(subject.name)}
+                            onCheckedChange={() => toggleSubject(subject.name)}
+                            className="mr-2"
+                          />
+                          <label
+                            htmlFor={`subject-${subject.id}`}
+                            className="text-sm cursor-pointer"
+                          >
+                            {subject.name}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-                {/* Filtro de duração */}
-                <div className="mb-6">
-                  <h3 className="font-semibold mb-3 flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    Duração
-                  </h3>
+                <div className="mt-6">
+                  <h3 className="text-lg font-semibold mb-3">Duração</h3>
                   <div className="space-y-2">
                     {durations.map((duration) => (
                       <div key={duration} className="flex items-center gap-2">

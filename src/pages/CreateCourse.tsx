@@ -27,12 +27,18 @@ import { CourseFormData, useCourses } from '@/hooks/useCourses';
 import { useAuth } from '@/context/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
 import { supabase } from '@/integrations/supabase/client';
+import CategorySelector from '@/components/CategorySelector';
+import { CategoryType, SubjectType } from '@/lib/categories';
+import { ModuleEditor, ModuleType, ContentItem, ContentType } from '@/components/content/ContentEditor';
+import ImageUploader from '@/components/ImageUploader';
+import { toast } from 'sonner';
 
 // Schema de validação para o formulário de curso
 const courseSchema = z.object({
   title: z.string().min(5, { message: 'O título deve ter pelo menos 5 caracteres' }),
   description: z.string().min(20, { message: 'A descrição deve ter pelo menos 20 caracteres' }),
   category: z.string({ required_error: 'Selecione uma categoria' }),
+  subject: z.string().nullable().optional(),
   duration: z.number().min(1, { message: 'A duração deve ser pelo menos 1 hora' }).or(z.string().transform(val => parseInt(val))),
   level: z.string({ required_error: 'Selecione um nível' }),
   price: z.number().min(0, { message: 'O preço não pode ser negativo' }).or(z.string().transform(val => parseInt(val))),
@@ -47,23 +53,33 @@ const CreateCourse = () => {
   const { createCourse, isLoading } = useCourses();
   const [activeTab, setActiveTab] = useState('informacoes');
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-  const [modules, setModules] = useState([
-    { id: 1, title: 'Introdução ao Curso', contents: [
-      { id: 1, type: 'video', title: 'Boas-vindas e Visão Geral' },
-      { id: 2, type: 'text', title: 'Material de Apoio' },
-      { id: 3, type: 'video', title: 'Como Aproveitar ao Máximo o Curso' },
-    ]},
-    { id: 2, title: 'Conceitos Fundamentais', contents: [
-      { id: 1, type: 'video', title: 'Fundamentos Teóricos' },
-      { id: 2, type: 'video', title: 'Aplicações Práticas' },
-      { id: 3, type: 'text', title: 'Leitura Complementar' },
-      { id: 4, type: 'video', title: 'Estudo de Caso' },
-      { id: 5, type: 'quiz', title: 'Quiz de Fixação' },
-    ]}
+  const [modules, setModules] = useState<ModuleType[]>([
+    { 
+      id: 1, 
+      title: 'Introdução ao Curso', 
+      contents: [
+        { id: 1, type: 'video', title: 'Boas-vindas e Visão Geral' },
+        { id: 2, type: 'text', title: 'Material de Apoio', text_content: 'Bem-vindo ao curso! Aqui você encontrará todos os recursos necessários para o seu aprendizado.' },
+        { id: 3, type: 'video', title: 'Como Aproveitar ao Máximo o Curso' },
+      ]
+    },
+    { 
+      id: 2, 
+      title: 'Conceitos Fundamentais', 
+      contents: [
+        { id: 1, type: 'video', title: 'Fundamentos Teóricos' },
+        { id: 2, type: 'video', title: 'Aplicações Práticas' },
+        { id: 3, type: 'pdf', title: 'Leitura Complementar' },
+        { id: 4, type: 'video', title: 'Estudo de Caso' },
+        { id: 5, type: 'quiz', title: 'Quiz de Fixação' },
+      ]
+    }
   ]);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<CategoryType | null>(null);
+  const [selectedSubject, setSelectedSubject] = useState<SubjectType | null>(null);
   const navigate = useNavigate();
   
   const form = useForm<CourseFormValues>({
@@ -72,6 +88,7 @@ const CreateCourse = () => {
       title: '',
       description: '',
       category: '',
+      subject: null,
       duration: 0,
       level: 'iniciante',
       price: 0,
@@ -87,6 +104,9 @@ const CreateCourse = () => {
       ...modules,
       { id: newId, title: `Novo Módulo ${newId}`, contents: [] }
     ]);
+    
+    // Mostrar feedback ao usuário
+    toast.success(`Módulo ${newId} adicionado`);
   };
 
   const handleUpdateModuleTitle = (moduleId: number, newTitle: string) => {
@@ -172,6 +192,24 @@ const CreateCourse = () => {
     }
   };
 
+  const handleCategoryChange = (category: CategoryType | null) => {
+    setSelectedCategory(category);
+    if (category) {
+      form.setValue('category', category.slug);
+    } else {
+      form.setValue('category', '');
+    }
+  };
+
+  const handleSubjectChange = (subject: SubjectType | null) => {
+    setSelectedSubject(subject);
+    if (subject) {
+      form.setValue('subject', subject.slug);
+    } else {
+      form.setValue('subject', null);
+    }
+  };
+
   const handleSubmit = async (values: CourseFormValues) => {
     try {
       let imageUrl = values.image_url || null;
@@ -183,11 +221,37 @@ const CreateCourse = () => {
         }
       }
       
+      // Verificar se há conteúdo no curso
+      if (modules.length === 0) {
+        toast.error('Adicione pelo menos um módulo ao curso');
+        setActiveTab('conteudo');
+        return;
+      }
+      
+      // Verificar se os módulos têm conteúdo
+      const hasEmptyModules = modules.some(module => module.contents.length === 0);
+      if (hasEmptyModules) {
+        toast.error('Todos os módulos devem ter pelo menos um conteúdo');
+        setActiveTab('conteudo');
+        return;
+      }
+      
+      // Verificar se os títulos estão preenchidos
+      const hasUntitledItems = modules.some(module => 
+        !module.title || module.contents.some(content => !content.title)
+      );
+      if (hasUntitledItems) {
+        toast.error('Todos os módulos e conteúdos devem ter títulos');
+        setActiveTab('conteudo');
+        return;
+      }
+      
       // Preparar dados do curso para envio
       const courseData: CourseFormData = {
         title: values.title,
         description: values.description,
         category: values.category,
+        subject: values.subject || null,
         duration: Number(values.duration),
         level: values.level,
         price: Number(values.price),
@@ -199,51 +263,57 @@ const CreateCourse = () => {
       
       if (error) throw error;
       
-      // Redirecionar para a página do curso
+      // Se o curso foi criado com sucesso, salvar os módulos e conteúdos
       if (data?.id) {
+        // Salvar os módulos e conteúdos
+        for (const module of modules) {
+          // Criar o módulo
+          const { data: moduleData, error: moduleError } = await supabase
+            .from('modules')
+            .insert({
+              course_id: data.id,
+              title: module.title,
+              order: module.id,
+            })
+            .select()
+            .single();
+            
+          if (moduleError) {
+            console.error('Erro ao criar módulo:', moduleError);
+            continue;
+          }
+          
+          // Criar os conteúdos do módulo
+          for (const content of module.contents) {
+            await supabase
+              .from('lessons')
+              .insert({
+                module_id: moduleData.id,
+                title: content.title,
+                content_type: content.type,
+                order: content.id,
+                description: content.description || null,
+                content_data: {
+                  video_url: content.video_url || null,
+                  video_duration: content.video_duration || null,
+                  thumbnail_url: content.thumbnail_url || null,
+                  document_url: content.document_url || null,
+                  text_content: content.text_content || null,
+                  quiz_questions: content.quiz_questions || [],
+                }
+              });
+          }
+        }
+        
+        toast.success('Curso criado com sucesso!');
+        
+        // Redirecionar para a página do curso
         navigate(`/curso/${data.id}`);
       }
     } catch (error) {
       console.error('Erro ao publicar curso:', error);
+      toast.error('Erro ao publicar curso. Tente novamente.');
     }
-  };
-
-  const ContentItem = ({ type, title, index, moduleIndex, contentId }: { 
-    type: 'video' | 'text' | 'quiz',
-    title: string, 
-    index: number,
-    moduleIndex: number,
-    contentId: number
-  }) => {
-    const icons = {
-      video: <Video className="h-4 w-4" />,
-      text: <FileText className="h-4 w-4" />,
-      quiz: <FileCheck className="h-4 w-4" />,
-    };
-
-    return (
-      <div className="flex items-center justify-between p-3 bg-card border border-border rounded-md mb-2 group">
-        <div className="flex items-center gap-3">
-          <div className="w-6 h-6 flex items-center justify-center bg-muted rounded-full text-xs">
-            {index}
-          </div>
-          <div className="flex items-center gap-2">
-            {icons[type]}
-            <span className="font-medium">{title}</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8"
-            onClick={() => handleDeleteContent(moduleIndex, contentId)}
-          >
-            <Trash2 className="h-4 w-4 text-destructive" />
-          </Button>
-        </div>
-      </div>
-    );
   };
 
   return (
@@ -346,26 +416,15 @@ const CreateCourse = () => {
                             name="category"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Categoria Principal*</FormLabel>
-                                <Select 
-                                  onValueChange={field.onChange}
-                                  defaultValue={field.value}
-                                >
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Selecione uma categoria" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    <SelectItem value="tecnologia">Tecnologia</SelectItem>
-                                    <SelectItem value="negocios">Negócios</SelectItem>
-                                    <SelectItem value="marketing">Marketing</SelectItem>
-                                    <SelectItem value="design">Design</SelectItem>
-                                    <SelectItem value="educacao">Educação</SelectItem>
-                                    <SelectItem value="saude">Saúde e Bem-Estar</SelectItem>
-                                    <SelectItem value="desenvolvimento-pessoal">Desenvolvimento Pessoal</SelectItem>
-                                  </SelectContent>
-                                </Select>
+                                <FormLabel>Categoria e Matéria do Curso*</FormLabel>
+                                <FormControl>
+                                  <CategorySelector
+                                    selectedCategory={selectedCategory}
+                                    selectedSubject={selectedSubject}
+                                    onCategoryChange={handleCategoryChange}
+                                    onSubjectChange={handleSubjectChange}
+                                  />
+                                </FormControl>
                                 <FormMessage />
                               </FormItem>
                             )}
@@ -523,64 +582,20 @@ const CreateCourse = () => {
                         </AlertDescription>
                       </Alert>
 
-                      <Accordion type="single" collapsible className="mb-6">
-                        {modules.map((module, moduleIndex) => (
-                          <AccordionItem key={module.id} value={`module-${module.id}`}>
-                            <AccordionTrigger className="hover:no-underline">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 bg-brand-blue text-white rounded-full flex items-center justify-center">
-                                  {moduleIndex + 1}
-                                </div>
-                                <div className="text-left">
-                                  <p className="font-medium">{module.title}</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {module.contents.length} {module.contents.length === 1 ? 'aula' : 'aulas'}
-                                  </p>
-                                </div>
-                              </div>
-                            </AccordionTrigger>
-                            <AccordionContent>
-                              <div className="pt-4 pb-2 space-y-4">
-                                <div className="mb-4">
-                                  <Label htmlFor={`module-title-${module.id}`}>Título do Módulo</Label>
-                                  <Input
-                                    id={`module-title-${module.id}`}
-                                    value={module.title}
-                                    onChange={(e) => handleUpdateModuleTitle(module.id, e.target.value)}
-                                    className="mt-1"
-                                  />
-                                </div>
-                                
-                                {module.contents.map((content, contentIndex) => (
-                                  <ContentItem
-                                    key={content.id}
-                                    type={content.type as 'video' | 'text' | 'quiz'}
-                                    title={content.title}
-                                    index={contentIndex + 1}
-                                    moduleIndex={moduleIndex}
-                                    contentId={content.id}
-                                  />
-                                ))}
-
-                                <div className="flex flex-wrap gap-2 mt-4">
-                                  <Button variant="outline" size="sm" onClick={() => handleAddContent(moduleIndex, 'video')}>
-                                    <Video className="h-4 w-4 mr-2" />
-                                    Adicionar Vídeo
-                                  </Button>
-                                  <Button variant="outline" size="sm" onClick={() => handleAddContent(moduleIndex, 'text')}>
-                                    <FileText className="h-4 w-4 mr-2" />
-                                    Adicionar Texto
-                                  </Button>
-                                  <Button variant="outline" size="sm" onClick={() => handleAddContent(moduleIndex, 'quiz')}>
-                                    <FileCheck className="h-4 w-4 mr-2" />
-                                    Adicionar Quiz
-                                  </Button>
-                                </div>
-                              </div>
-                            </AccordionContent>
-                          </AccordionItem>
-                        ))}
-                      </Accordion>
+                      {modules.map((module, index) => (
+                        <ModuleEditor
+                          key={module.id}
+                          module={module}
+                          onUpdate={(updatedModule) => {
+                            setModules(modules.map(m => 
+                              m.id === updatedModule.id ? updatedModule : m
+                            ));
+                          }}
+                          onDelete={() => {
+                            setModules(modules.filter(m => m.id !== module.id));
+                          }}
+                        />
+                      ))}
 
                       <div className="flex justify-between">
                         <Button 
@@ -605,181 +620,186 @@ const CreateCourse = () => {
                 <TabsContent value="precos" className="space-y-6">
                   <Card>
                     <CardContent className="pt-6">
-                      <h2 className="text-xl font-bold mb-6">Preços e Configurações de Publicação</h2>
+                      <Form {...form}>
+                        <div className="space-y-6">
+                          <h2 className="text-xl font-bold mb-6">Preços e Configurações de Publicação</h2>
 
-                      <div className="space-y-6 mb-8">
-                        <FormField
-                          control={form.control}
-                          name="price"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Preço do Curso (R$)*</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  placeholder="Ex: 49.90"
-                                  {...field}
-                                  onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                Defina o preço do seu curso em reais. Use 0 para cursos gratuitos.
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                          <div className="space-y-6 mb-8">
+                            <FormField
+                              control={form.control}
+                              name="price"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Preço do Curso (R$)*</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      step="0.01"
+                                      placeholder="Ex: 49.90"
+                                      {...field}
+                                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                    />
+                                  </FormControl>
+                                  <FormDescription>
+                                    Defina o preço do seu curso em reais. Use 0 para cursos gratuitos.
+                                  </FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
 
-                        <div>
-                          <Label className="mb-3 block">Escolha um Plano de Preço*</Label>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {/* Plano Básico */}
-                            <div 
-                              className={`border rounded-lg overflow-hidden cursor-pointer transition-all ${
-                                selectedPlan === 'basic' 
-                                  ? 'border-brand-blue ring-2 ring-brand-blue/20' 
-                                  : 'border-border hover:border-brand-blue/50'
-                              }`}
-                              onClick={() => handlePlanSelect('basic')}
-                            >
-                              <div className="bg-brand-blue/10 p-4 text-center border-b border-border">
-                                <h3 className="font-bold">Plano Básico</h3>
-                                <p className="text-2xl font-bold mt-2 text-brand-blue">R$ 40,99</p>
-                                <p className="text-xs text-muted-foreground mt-1">até 50 alunos</p>
-                              </div>
-                              <div className="p-4">
-                                <ul className="space-y-2">
-                                  <li className="flex items-center gap-2 text-sm">
-                                    <CheckCircle className="h-4 w-4 text-brand-green" />
-                                    <span>Acesso a ferramentas básicas</span>
-                                  </li>
-                                  <li className="flex items-center gap-2 text-sm">
-                                    <CheckCircle className="h-4 w-4 text-brand-green" />
-                                    <span>Upload de vídeos (até 2GB)</span>
-                                  </li>
-                                  <li className="flex items-center gap-2 text-sm">
-                                    <CheckCircle className="h-4 w-4 text-brand-green" />
-                                    <span>Relatórios simplificados</span>
-                                  </li>
-                                </ul>
-                              </div>
-                            </div>
-
-                            {/* Plano Standard */}
-                            <div 
-                              className={`border rounded-lg overflow-hidden cursor-pointer transition-all ${
-                                selectedPlan === 'standard' 
-                                  ? 'border-brand-blue ring-2 ring-brand-blue/20' 
-                                  : 'border-border hover:border-brand-blue/50'
-                              }`}
-                              onClick={() => handlePlanSelect('standard')}
-                            >
-                              <div className="bg-brand-blue/10 p-4 text-center border-b border-border relative overflow-hidden">
-                                <div className="absolute top-0 right-0 bg-brand-yellow text-xs px-3 py-1 font-semibold text-black">
-                                  POPULAR
+                            <div>
+                              <Label className="mb-3 block">Escolha um Plano de Preço*</Label>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {/* Plano Básico */}
+                                <div 
+                                  className={`border rounded-lg overflow-hidden cursor-pointer transition-all ${
+                                    selectedPlan === 'basic' 
+                                      ? 'border-brand-blue ring-2 ring-brand-blue/20' 
+                                      : 'border-border hover:border-brand-blue/50'
+                                  }`}
+                                  onClick={() => handlePlanSelect('basic')}
+                                >
+                                  <div className="bg-brand-blue/10 p-4 text-center border-b border-border">
+                                    <h3 className="font-bold">Plano Básico</h3>
+                                    <p className="text-2xl font-bold mt-2 text-brand-blue">R$ 40,99</p>
+                                    <p className="text-xs text-muted-foreground mt-1">até 50 alunos</p>
+                                  </div>
+                                  <div className="p-4">
+                                    <ul className="space-y-2">
+                                      <li className="flex items-center gap-2 text-sm">
+                                        <CheckCircle className="h-4 w-4 text-brand-green" />
+                                        <span>Acesso a ferramentas básicas</span>
+                                      </li>
+                                      <li className="flex items-center gap-2 text-sm">
+                                        <CheckCircle className="h-4 w-4 text-brand-green" />
+                                        <span>Upload de vídeos (até 2GB)</span>
+                                      </li>
+                                      <li className="flex items-center gap-2 text-sm">
+                                        <CheckCircle className="h-4 w-4 text-brand-green" />
+                                        <span>Relatórios simplificados</span>
+                                      </li>
+                                    </ul>
+                                  </div>
                                 </div>
-                                <h3 className="font-bold">Plano Standard</h3>
-                                <p className="text-2xl font-bold mt-2 text-brand-blue">R$ 149,99</p>
-                                <p className="text-xs text-muted-foreground mt-1">até 500 alunos</p>
-                              </div>
-                              <div className="p-4">
-                                <ul className="space-y-2">
-                                  <li className="flex items-center gap-2 text-sm">
-                                    <CheckCircle className="h-4 w-4 text-brand-green" />
-                                    <span>Todas as ferramentas básicas</span>
-                                  </li>
-                                  <li className="flex items-center gap-2 text-sm">
-                                    <CheckCircle className="h-4 w-4 text-brand-green" />
-                                    <span>Upload de vídeos (até 10GB)</span>
-                                  </li>
-                                  <li className="flex items-center gap-2 text-sm">
-                                    <CheckCircle className="h-4 w-4 text-brand-green" />
-                                    <span>Relatórios detalhados</span>
-                                  </li>
-                                  <li className="flex items-center gap-2 text-sm">
-                                    <CheckCircle className="h-4 w-4 text-brand-green" />
-                                    <span>Certificados personalizados</span>
-                                  </li>
-                                </ul>
-                              </div>
-                            </div>
 
-                            {/* Plano Premium */}
-                            <div 
-                              className={`border rounded-lg overflow-hidden cursor-pointer transition-all ${
-                                selectedPlan === 'premium' 
-                                  ? 'border-brand-blue ring-2 ring-brand-blue/20' 
-                                  : 'border-border hover:border-brand-blue/50'
-                              }`}
-                              onClick={() => handlePlanSelect('premium')}
-                            >
-                              <div className="bg-brand-blue/10 p-4 text-center border-b border-border">
-                                <h3 className="font-bold">Plano Premium</h3>
-                                <p className="text-2xl font-bold mt-2 text-brand-blue">R$ 289,90</p>
-                                <p className="text-xs text-muted-foreground mt-1">alunos ilimitados</p>
+                                {/* Plano Standard */}
+                                <div 
+                                  className={`border rounded-lg overflow-hidden cursor-pointer transition-all ${
+                                    selectedPlan === 'standard' 
+                                      ? 'border-brand-blue ring-2 ring-brand-blue/20' 
+                                      : 'border-border hover:border-brand-blue/50'
+                                  }`}
+                                  onClick={() => handlePlanSelect('standard')}
+                                >
+                                  <div className="bg-brand-blue/10 p-4 text-center border-b border-border relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 bg-brand-yellow text-xs px-3 py-1 font-semibold text-black">
+                                      POPULAR
+                                    </div>
+                                    <h3 className="font-bold">Plano Standard</h3>
+                                    <p className="text-2xl font-bold mt-2 text-brand-blue">R$ 149,99</p>
+                                    <p className="text-xs text-muted-foreground mt-1">até 500 alunos</p>
+                                  </div>
+                                  <div className="p-4">
+                                    <ul className="space-y-2">
+                                      <li className="flex items-center gap-2 text-sm">
+                                        <CheckCircle className="h-4 w-4 text-brand-green" />
+                                        <span>Todas as ferramentas básicas</span>
+                                      </li>
+                                      <li className="flex items-center gap-2 text-sm">
+                                        <CheckCircle className="h-4 w-4 text-brand-green" />
+                                        <span>Upload de vídeos (até 10GB)</span>
+                                      </li>
+                                      <li className="flex items-center gap-2 text-sm">
+                                        <CheckCircle className="h-4 w-4 text-brand-green" />
+                                        <span>Relatórios detalhados</span>
+                                      </li>
+                                      <li className="flex items-center gap-2 text-sm">
+                                        <CheckCircle className="h-4 w-4 text-brand-green" />
+                                        <span>Certificados personalizados</span>
+                                      </li>
+                                    </ul>
+                                  </div>
+                                </div>
+
+                                {/* Plano Premium */}
+                                <div 
+                                  className={`border rounded-lg overflow-hidden cursor-pointer transition-all ${
+                                    selectedPlan === 'premium' 
+                                      ? 'border-brand-blue ring-2 ring-brand-blue/20' 
+                                      : 'border-border hover:border-brand-blue/50'
+                                  }`}
+                                  onClick={() => handlePlanSelect('premium')}
+                                >
+                                  <div className="bg-brand-blue/10 p-4 text-center border-b border-border">
+                                    <h3 className="font-bold">Plano Premium</h3>
+                                    <p className="text-2xl font-bold mt-2 text-brand-blue">R$ 289,90</p>
+                                    <p className="text-xs text-muted-foreground mt-1">alunos ilimitados</p>
+                                  </div>
+                                  <div className="p-4">
+                                    <ul className="space-y-2">
+                                      <li className="flex items-center gap-2 text-sm">
+                                        <CheckCircle className="h-4 w-4 text-brand-green" />
+                                        <span>Todos os recursos standard</span>
+                                      </li>
+                                      <li className="flex items-center gap-2 text-sm">
+                                        <CheckCircle className="h-4 w-4 text-brand-green" />
+                                        <span>Upload de vídeos ilimitado</span>
+                                      </li>
+                                      <li className="flex items-center gap-2 text-sm">
+                                        <CheckCircle className="h-4 w-4 text-brand-green" />
+                                        <span>Análise avançada de desempenho</span>
+                                      </li>
+                                      <li className="flex items-center gap-2 text-sm">
+                                        <CheckCircle className="h-4 w-4 text-brand-green" />
+                                        <span>Suporte prioritário</span>
+                                      </li>
+                                      <li className="flex items-center gap-2 text-sm">
+                                        <CheckCircle className="h-4 w-4 text-brand-green" />
+                                        <span>Integração com IA para chatbot</span>
+                                      </li>
+                                    </ul>
+                                  </div>
+                                </div>
                               </div>
-                              <div className="p-4">
-                                <ul className="space-y-2">
-                                  <li className="flex items-center gap-2 text-sm">
-                                    <CheckCircle className="h-4 w-4 text-brand-green" />
-                                    <span>Todos os recursos standard</span>
-                                  </li>
-                                  <li className="flex items-center gap-2 text-sm">
-                                    <CheckCircle className="h-4 w-4 text-brand-green" />
-                                    <span>Upload de vídeos ilimitado</span>
-                                  </li>
-                                  <li className="flex items-center gap-2 text-sm">
-                                    <CheckCircle className="h-4 w-4 text-brand-green" />
-                                    <span>Análise avançada de desempenho</span>
-                                  </li>
-                                  <li className="flex items-center gap-2 text-sm">
-                                    <CheckCircle className="h-4 w-4 text-brand-green" />
-                                    <span>Suporte prioritário</span>
-                                  </li>
-                                  <li className="flex items-center gap-2 text-sm">
-                                    <CheckCircle className="h-4 w-4 text-brand-green" />
-                                    <span>Integração com IA para chatbot</span>
-                                  </li>
-                                </ul>
-                              </div>
+                              
+                              <p className="text-xs text-muted-foreground mt-3">
+                                Os valores se referem ao preço total do curso que você receberá após as taxas da plataforma (15%).
+                              </p>
                             </div>
                           </div>
-                          
-                          <p className="text-xs text-muted-foreground mt-3">
-                            Os valores se referem ao preço total do curso que você receberá após as taxas da plataforma (15%).
-                          </p>
+
+                          <Alert className="mb-6" variant="destructive">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertTitle>Importante!</AlertTitle>
+                            <AlertDescription>
+                              Antes de publicar, revise cuidadosamente todas as informações do seu curso. Após a publicação, alterações significativas podem exigir aprovação da nossa equipe.
+                            </AlertDescription>
+                          </Alert>
+
+                          <div className="flex justify-between">
+                            <Button 
+                              variant="outline" 
+                              onClick={() => setActiveTab('conteudo')}
+                              type="button"
+                            >
+                              Voltar
+                            </Button>
+                            <Button 
+                              type="button"
+                              size="lg" 
+                              className="gap-2"
+                              onClick={form.handleSubmit(handleSubmit)}
+                              disabled={isLoading || uploading}
+                            >
+                              Publicar Curso
+                              <ArrowRight className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-
-                      <Alert className="mb-6" variant="destructive">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Importante!</AlertTitle>
-                        <AlertDescription>
-                          Antes de publicar, revise cuidadosamente todas as informações do seu curso. Após a publicação, alterações significativas podem exigir aprovação da nossa equipe.
-                        </AlertDescription>
-                      </Alert>
-
-                      <div className="flex justify-between">
-                        <Button 
-                          variant="outline" 
-                          onClick={() => setActiveTab('conteudo')}
-                        >
-                          Voltar
-                        </Button>
-                        
-                        <Button 
-                          size="lg" 
-                          className="gap-2"
-                          onClick={form.handleSubmit(handleSubmit)}
-                          disabled={isLoading || uploading}
-                        >
-                          {isLoading ? 'Publicando...' : 'Publicar Curso'}
-                          <ArrowRight className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      </Form>
                     </CardContent>
                   </Card>
                 </TabsContent>

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ArrowRight, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,7 +23,7 @@ const HeroSection = () => {
                 </Button>
               </Link>
               <Link to="/criar-curso">
-                <Button size="lg" variant="outline" className="text-white border-white hover:bg-white/10">
+                <Button size="lg" className="text-white border border-white hover:bg-white/10 bg-transparent">
                   Criar um Curso
                 </Button>
               </Link>

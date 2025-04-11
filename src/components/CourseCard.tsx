@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Clock, Calendar, Heart } from 'lucide-react';
@@ -10,6 +9,8 @@ export interface CourseProps {
   title: string;
   category: string;
   categorySlug: string;
+  subject?: string;
+  subjectSlug?: string;
   image: string;
   instructor: string;
   duration: string;
@@ -35,11 +36,20 @@ const CourseCard: React.FC<{ course: CourseProps }> = ({ course }) => {
         </Button>
         <img src={course.image} alt={course.title} className="w-full h-48 object-cover" />
         <div className="absolute bottom-0 left-0 w-full p-2 bg-gradient-to-t from-black/70 to-transparent">
-          <Link to={`/categorias/${course.categorySlug}`}>
-            <Badge variant="outline" className="bg-white/20 text-white hover:bg-white/30 border-none">
-              {course.category}
-            </Badge>
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link to={`/categorias/${course.categorySlug}`}>
+              <Badge variant="outline" className="bg-white/20 text-white hover:bg-white/30 border-none">
+                {course.category}
+              </Badge>
+            </Link>
+            {course.subject && course.subjectSlug && (
+              <Link to={`/materias/${course.subjectSlug}`}>
+                <Badge variant="outline" className="bg-white/20 text-white hover:bg-white/30 border-none">
+                  {course.subject}
+                </Badge>
+              </Link>
+            )}
+          </div>
         </div>
       </div>
       <div className="p-4">

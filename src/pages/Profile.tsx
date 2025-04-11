@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -14,126 +14,210 @@ import {
 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
+import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
+
+// Definição da interface para cursos
+interface CourseData {
+  id: string;
+  title: string;
+  instructor: string;
+  image: string;
+  progress?: number;
+  lastAccessed?: string;
+  nextLesson?: string;
+  totalLessons?: number;
+  completedLessons?: number;
+  completedDate?: string;
+  isCertificateIssued?: boolean;
+  rating?: number;
+  price?: number;
+  isFree?: boolean;
+  savingDate?: string;
+}
+
+// Definição da interface para certificados
+interface CertificateData {
+  id: string;
+  title: string;
+  issueDate: string;
+  courseId: string;
+  image: string;
+}
 
 const Profile = () => {
   const [activeTab, setActiveTab] = useState('meus-cursos');
-
-  // Dados simulados do usuário
-  const user = {
-    name: 'João Silva',
-    email: 'joao.silva@exemplo.com',
-    avatarUrl: 'https://randomuser.me/api/portraits/men/32.jpg',
-    role: 'Estudante',
-    memberSince: '12/08/2023',
-    coursesCompleted: 3,
-    coursesInProgress: 2,
-    certificateCount: 2,
-  };
-
-  // Dados simulados de cursos em andamento
-  const inProgressCourses = [
-    {
-      id: '1',
-      title: 'React e TypeScript: desenvolvendo uma aplicação completa',
-      instructor: 'Amanda Costa',
-      image: 'https://picsum.photos/id/23/600/400',
-      progress: 35,
-      lastAccessed: '24/03/2024',
-      nextLesson: 'UseEffect e ciclo de vida',
-      totalLessons: 20,
-      completedLessons: 7,
-    },
-    {
-      id: '2',
-      title: 'Marketing Digital Avançado: Estratégias de Conversão',
-      instructor: 'Camila Souza',
-      image: 'https://picsum.photos/id/32/600/400',
-      progress: 15,
-      lastAccessed: '22/03/2024',
-      nextLesson: 'Estratégias de SEO para aumento de tráfego',
-      totalLessons: 18,
-      completedLessons: 3,
-    },
-  ];
-
-  // Dados simulados de cursos concluídos
-  const completedCourses = [
-    {
-      id: '3',
-      title: 'Pré-aceleração Sebrae Startups',
-      instructor: 'João Silva',
-      image: 'https://picsum.photos/id/20/600/400',
-      completedDate: '15/02/2024',
-      isCertificateIssued: true,
-      rating: 5,
-    },
-    {
-      id: '4',
-      title: 'Curso Marketing digital para sua empresa: equipe comercial',
-      instructor: 'Maria Oliveira',
-      image: 'https://picsum.photos/id/21/600/400',
-      completedDate: '03/01/2024',
-      isCertificateIssued: true,
-      rating: 4,
-    },
-    {
-      id: '5',
-      title: 'Legislação e negócios para o audiovisual',
-      instructor: 'Pedro Santos',
-      image: 'https://picsum.photos/id/22/600/400',
-      completedDate: '10/12/2023',
-      isCertificateIssued: false,
-      rating: 4,
-    },
-  ];
-
-  // Dados simulados de cursos salvos
-  const savedCourses = [
-    {
-      id: '6',
-      title: 'Inteligência Artificial: Implementação Prática com Python',
-      instructor: 'Rafael Costa',
-      image: 'https://picsum.photos/id/29/600/400',
-      price: 289.90,
-      isFree: false,
-      savingDate: '20/03/2024',
-    },
-    {
-      id: '7',
-      title: 'Gestão Ágil de Projetos: Scrum, Kanban e XP',
-      instructor: 'Fernanda Martins',
-      image: 'https://picsum.photos/id/30/600/400',
-      price: 149.99,
-      isFree: false,
-      savingDate: '18/03/2024',
-    },
-  ];
-
-  // Dados simulados de certificados
-  const certificates = [
-    {
-      id: 'cert1',
-      title: 'Pré-aceleração Sebrae Startups',
-      issueDate: '16/02/2024',
-      courseId: '3',
-      image: 'https://picsum.photos/id/20/600/400',
-    },
-    {
-      id: 'cert2',
-      title: 'Curso Marketing digital para sua empresa: equipe comercial',
-      issueDate: '04/01/2024',
-      courseId: '4',
-      image: 'https://picsum.photos/id/21/600/400',
-    },
-  ];
-
-  // Dados simulados de notificações
-  const notificationSettings = {
+  const { user, profile, refreshProfile } = useAuth();
+  const { toast } = useToast();
+  
+  // Estados para os cursos e certificados
+  const [inProgressCourses, setInProgressCourses] = useState<CourseData[]>([]);
+  const [completedCourses, setCompletedCourses] = useState<CourseData[]>([]);
+  const [savedCourses, setSavedCourses] = useState<CourseData[]>([]);
+  const [certificates, setCertificates] = useState<CertificateData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Estado para configurações de notificações
+  const [notificationSettings, setNotificationSettings] = useState({
     courseUpdates: true,
     newMessages: true,
     promotions: false,
     newsletter: true,
     completionReminders: true,
+  });
+  
+  // Carregar os dados do usuário ao montar o componente
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!user) return;
+      
+      setIsLoading(true);
+      try {
+        // Buscar cursos em andamento
+        const { data: inProgressData, error: inProgressError } = await supabase
+          .from('user_courses')
+          .select('*, course:courses(*)')
+          .eq('user_id', user.id)
+          .eq('status', 'in_progress');
+        
+        if (inProgressError) throw inProgressError;
+        
+        // Buscar cursos concluídos
+        const { data: completedData, error: completedError } = await supabase
+          .from('user_courses')
+          .select('*, course:courses(*)')
+          .eq('user_id', user.id)
+          .eq('status', 'completed');
+        
+        if (completedError) throw completedError;
+        
+        // Buscar cursos salvos
+        const { data: savedData, error: savedError } = await supabase
+          .from('saved_courses')
+          .select('*, course:courses(*)')
+          .eq('user_id', user.id);
+        
+        if (savedError) throw savedError;
+        
+        // Buscar certificados
+        const { data: certificatesData, error: certificatesError } = await supabase
+          .from('certificates')
+          .select('*, course:courses(*)')
+          .eq('user_id', user.id);
+        
+        if (certificatesError) throw certificatesError;
+        
+        // Formatar os dados de cursos em andamento
+        const formattedInProgress = inProgressData.map((item) => ({
+          id: item.course.id,
+          title: item.course.title,
+          instructor: item.course.instructor_name,
+          image: item.course.image_url,
+          progress: item.progress || 0,
+          lastAccessed: item.last_accessed ? format(new Date(item.last_accessed), 'dd/MM/yyyy') : '',
+          nextLesson: item.current_lesson_title || 'Primeira aula',
+          totalLessons: item.course.lesson_count || 0,
+          completedLessons: Math.floor((item.progress || 0) * (item.course.lesson_count || 0) / 100),
+        }));
+        
+        // Formatar os dados de cursos concluídos
+        const formattedCompleted = completedData.map((item) => ({
+          id: item.course.id,
+          title: item.course.title,
+          instructor: item.course.instructor_name,
+          image: item.course.image_url,
+          completedDate: item.completed_at ? format(new Date(item.completed_at), 'dd/MM/yyyy') : '',
+          isCertificateIssued: Boolean(item.certificate_id),
+          rating: item.rating || 0,
+        }));
+        
+        // Formatar os dados de cursos salvos
+        const formattedSaved = savedData.map((item) => ({
+          id: item.course.id,
+          title: item.course.title,
+          instructor: item.course.instructor_name,
+          image: item.course.image_url,
+          price: item.course.price || 0,
+          isFree: item.course.is_free,
+          savingDate: item.created_at ? format(new Date(item.created_at), 'dd/MM/yyyy') : '',
+        }));
+        
+        // Formatar os dados de certificados
+        const formattedCertificates = certificatesData.map((item) => ({
+          id: item.id,
+          title: item.course.title,
+          issueDate: item.issue_date ? format(new Date(item.issue_date), 'dd/MM/yyyy') : '',
+          courseId: item.course.id,
+          image: item.course.image_url,
+        }));
+        
+        // Atualizar os estados
+        setInProgressCourses(formattedInProgress);
+        setCompletedCourses(formattedCompleted);
+        setSavedCourses(formattedSaved);
+        setCertificates(formattedCertificates);
+      } catch (error) {
+        console.error('Erro ao buscar dados do usuário:', error);
+        
+        // Em caso de erro, usar dados simulados para desenvolvimento
+        // Na produção, seria melhor mostrar uma mensagem de erro
+        setInProgressCourses([
+          {
+            id: '1',
+            title: 'React e TypeScript: desenvolvendo uma aplicação completa',
+            instructor: 'Amanda Costa',
+            image: 'https://picsum.photos/id/23/600/400',
+            progress: 35,
+            lastAccessed: '24/03/2024',
+            nextLesson: 'UseEffect e ciclo de vida',
+            totalLessons: 20,
+            completedLessons: 7,
+          },
+          {
+            id: '2',
+            title: 'Marketing Digital Avançado: Estratégias de Conversão',
+            instructor: 'Camila Souza',
+            image: 'https://picsum.photos/id/32/600/400',
+            progress: 15,
+            lastAccessed: '22/03/2024',
+            nextLesson: 'Estratégias de SEO para aumento de tráfego',
+            totalLessons: 18,
+            completedLessons: 3,
+          },
+        ]);
+        
+        setCompletedCourses([
+          {
+            id: '3',
+            title: 'Pré-aceleração Sebrae Startups',
+            instructor: 'João Silva',
+            image: 'https://picsum.photos/id/20/600/400',
+            completedDate: '15/02/2024',
+            isCertificateIssued: true,
+            rating: 5,
+          },
+        ]);
+        
+        toast({
+          variant: "destructive",
+          title: "Erro ao carregar dados",
+          description: "Não foi possível carregar seus dados. Por favor, tente novamente mais tarde.",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchUserData();
+  }, [user, toast]);
+  
+  // Cálculo das estatísticas do usuário
+  const userStats = {
+    coursesInProgress: inProgressCourses.length,
+    coursesCompleted: completedCourses.length,
+    certificateCount: certificates.length,
   };
 
   return (
@@ -146,8 +230,8 @@ const Profile = () => {
             <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
               <div className="relative">
                 <Avatar className="w-24 h-24 border-4 border-white">
-                  <AvatarImage src={user.avatarUrl} />
-                  <AvatarFallback>{user.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                  <AvatarImage src={profile?.avatar_url || ''} />
+                  <AvatarFallback>{profile?.name?.split(' ').map(n => n[0]).join('') || user?.email?.substring(0, 2).toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <Button 
                   variant="secondary" 
@@ -158,20 +242,20 @@ const Profile = () => {
                 </Button>
               </div>
               <div className="text-center md:text-left">
-                <h1 className="text-3xl font-bold">{user.name}</h1>
-                <p className="text-white/80">{user.email}</p>
+                <h1 className="text-3xl font-bold">{profile?.name || 'Usuário'}</h1>
+                <p className="text-white/80">{profile?.email || user?.email}</p>
                 <div className="flex flex-wrap justify-center md:justify-start gap-4 mt-2">
                   <div className="flex items-center gap-2">
                     <BookOpen className="h-4 w-4" />
-                    <span>{user.coursesInProgress} cursos em andamento</span>
+                    <span>{userStats.coursesInProgress} cursos em andamento</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle className="h-4 w-4" />
-                    <span>{user.coursesCompleted} cursos concluídos</span>
+                    <span>{userStats.coursesCompleted} cursos concluídos</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Award className="h-4 w-4" />
-                    <span>{user.certificateCount} certificados</span>
+                    <span>{userStats.certificateCount} certificados</span>
                   </div>
                 </div>
               </div>
@@ -222,8 +306,15 @@ const Profile = () => {
 
             {/* Coluna de conteúdo */}
             <div className="lg:col-span-3 space-y-8">
+              {/* Indicador de carregamento */}
+              {isLoading && (
+                <div className="flex justify-center items-center h-64">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-blue"></div>
+                </div>
+              )}
+              
               {/* Meus Cursos */}
-              {activeTab === 'meus-cursos' && (
+              {!isLoading && activeTab === 'meus-cursos' && (
                 <div>
                   <Tabs defaultValue="em-andamento">
                     <TabsList className="mb-6">
@@ -248,43 +339,43 @@ const Profile = () => {
                             <Card key={course.id} className="overflow-hidden">
                               <div className="flex flex-col md:flex-row">
                                 <div className="md:w-1/3 w-full h-48 md:h-auto">
-                                  <img 
-                                    src={course.image} 
-                                    alt={course.title}
-                                    className="w-full h-full object-cover"
-                                  />
+                                  <img src={course.image} alt={course.title} className="w-full h-full object-cover" />
                                 </div>
-                                <div className="flex-1 p-6">
+                                <div className="p-6 md:w-2/3 w-full">
                                   <h3 className="text-xl font-bold mb-2">{course.title}</h3>
-                                  <p className="text-muted-foreground mb-4">Instrutor: {course.instructor}</p>
+                                  <p className="text-sm text-muted-foreground">Instrutor: {course.instructor}</p>
                                   
-                                  <div className="space-y-4">
+                                  <div className="mt-4">
+                                    <div className="flex justify-between items-center mb-2">
+                                      <span className="text-sm font-medium">Progresso do curso</span>
+                                      <span className="text-sm font-medium">{course.progress}%</span>
+                                    </div>
+                                    <Progress value={course.progress} className="h-2" />
+                                  </div>
+                                  
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 text-sm">
+                                    <div className="flex items-start gap-2">
+                                      <Clock className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                                      <div>
+                                        <p className="font-medium">Último acesso</p>
+                                        <p className="text-muted-foreground">{course.lastAccessed}</p>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-start gap-2">
+                                      <FileCheck className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                                      <div>
+                                        <p className="font-medium">Aulas concluídas</p>
+                                        <p className="text-muted-foreground">{course.completedLessons} de {course.totalLessons}</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="mt-6 flex justify-between items-center">
                                     <div>
-                                      <div className="flex justify-between text-sm mb-1">
-                                        <span>Seu progresso</span>
-                                        <span>{course.progress}%</span>
-                                      </div>
-                                      <Progress value={course.progress} className="h-2" />
+                                      <h4 className="text-sm font-medium">Próxima aula:</h4>
+                                      <p className="text-sm text-muted-foreground">{course.nextLesson}</p>
                                     </div>
-                                    
-                                    <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
-                                      <div className="flex items-center gap-1">
-                                        <CheckCircle className="h-4 w-4 text-brand-green" />
-                                        <span>{course.completedLessons} de {course.totalLessons} aulas concluídas</span>
-                                      </div>
-                                      <div className="flex items-center gap-1">
-                                        <Clock className="h-4 w-4" />
-                                        <span>Último acesso: {course.lastAccessed}</span>
-                                      </div>
-                                    </div>
-                                    
-                                    <div className="pt-2">
-                                      <div className="text-sm mb-1">Próxima aula:</div>
-                                      <div className="flex items-center justify-between">
-                                        <div className="font-medium">{course.nextLesson}</div>
-                                        <Button>Continuar</Button>
-                                      </div>
-                                    </div>
+                                    <Button>Continuar</Button>
                                   </div>
                                 </div>
                               </div>
@@ -301,7 +392,7 @@ const Profile = () => {
                           <CheckCircle className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
                           <h3 className="text-xl font-medium mb-2">Nenhum curso concluído</h3>
                           <p className="text-muted-foreground mb-4">
-                            Você ainda não concluiu nenhum curso.
+                            Você ainda não concluiu nenhum curso na plataforma.
                           </p>
                           <Button>Explorar Cursos</Button>
                         </div>
@@ -310,59 +401,59 @@ const Profile = () => {
                           {completedCourses.map((course) => (
                             <Card key={course.id} className="overflow-hidden">
                               <div className="flex flex-col md:flex-row">
-                                <div className="md:w-1/4 w-full h-36 md:h-auto">
-                                  <img 
-                                    src={course.image} 
-                                    alt={course.title}
-                                    className="w-full h-full object-cover"
-                                  />
+                                <div className="md:w-1/3 w-full h-48 md:h-auto">
+                                  <img src={course.image} alt={course.title} className="w-full h-full object-cover" />
                                 </div>
-                                <div className="flex-1 p-6">
-                                  <h3 className="text-lg font-bold mb-1">{course.title}</h3>
-                                  <p className="text-muted-foreground mb-3">Instrutor: {course.instructor}</p>
-                                  
-                                  <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground mb-3">
-                                    <div className="flex items-center gap-1">
-                                      <CheckCircle className="h-4 w-4 text-brand-green" />
-                                      <span>Concluído em {course.completedDate}</span>
+                                <div className="p-6 md:w-2/3 w-full">
+                                  <div className="flex items-start justify-between">
+                                    <div>
+                                      <h3 className="text-xl font-bold mb-2">{course.title}</h3>
+                                      <p className="text-sm text-muted-foreground">Instrutor: {course.instructor}</p>
                                     </div>
-                                    <div className="flex items-center gap-1">
-                                      {[1, 2, 3, 4, 5].map((star) => (
-                                        <svg
-                                          key={star}
-                                          className={`w-4 h-4 ${
-                                            star <= course.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'
-                                          }`}
-                                          xmlns="http://www.w3.org/2000/svg"
-                                          viewBox="0 0 24 24"
-                                        >
-                                          <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
-                                          />
-                                        </svg>
-                                      ))}
-                                      <span>({course.rating})</span>
-                                    </div>
+                                    {course.isCertificateIssued && (
+                                      <div className="flex-shrink-0">
+                                        <Button variant="outline" size="sm" className="flex items-center gap-1">
+                                          <FileDown className="h-4 w-4" />
+                                          <span>Certificado</span>
+                                        </Button>
+                                      </div>
+                                    )}
                                   </div>
                                   
-                                  <div className="flex flex-wrap gap-3">
-                                    <Button variant="outline" size="sm">
-                                      <BookOpen className="h-4 w-4 mr-2" />
-                                      Ver Curso
-                                    </Button>
+                                  <div className="flex items-center gap-6 mt-4">
+                                    <div className="flex items-center gap-2">
+                                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                                      <div className="text-sm">
+                                        <span className="font-medium">Concluído em:</span> {course.completedDate}
+                                      </div>
+                                    </div>
                                     
-                                    {course.isCertificateIssued ? (
-                                      <Button size="sm">
-                                        <Award className="h-4 w-4 mr-2" />
-                                        Ver Certificado
-                                      </Button>
-                                    ) : (
-                                      <Button variant="outline" size="sm" disabled>
-                                        <Award className="h-4 w-4 mr-2" />
-                                        Certificado Pendente
+                                    {course.rating > 0 && (
+                                      <div className="flex items-center">
+                                        <span className="text-sm font-medium mr-2">Sua avaliação:</span>
+                                        <div className="flex items-center">
+                                          {[...Array(5)].map((_, i) => (
+                                            <svg
+                                              key={i}
+                                              className={`w-4 h-4 ${i < course.rating ? 'text-yellow-400' : 'text-gray-300'}`}
+                                              fill="currentColor"
+                                              viewBox="0 0 20 20"
+                                            >
+                                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                            </svg>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                  
+                                  <div className="mt-6 flex justify-between items-center">
+                                    <Button variant="outline">Ver detalhes</Button>
+                                    
+                                    {!course.isCertificateIssued && (
+                                      <Button variant="secondary" size="sm" className="flex items-center gap-1">
+                                        <Award className="h-4 w-4" />
+                                        <span>Solicitar certificado</span>
                                       </Button>
                                     )}
                                   </div>
@@ -419,7 +510,7 @@ const Profile = () => {
                                 Salvo em {course.savingDate}
                               </span>
                               <span className="font-bold">
-                                {course.isFree ? "Gratuito" : `R$ ${course.price.toFixed(2)}`}
+                                {course.isFree ? "Gratuito" : `R$ ${course.price?.toFixed(2) || '0.00'}`}
                               </span>
                             </div>
                             <div className="flex gap-2">
@@ -508,9 +599,9 @@ const Profile = () => {
                             <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
                               <div className="md:w-32 flex-shrink-0">
                                 <Avatar className="w-32 h-32 mx-auto">
-                                  <AvatarImage src={user.avatarUrl} />
+                                  <AvatarImage src={profile?.avatar_url || ''} />
                                   <AvatarFallback className="text-4xl">
-                                    {user.name.split(' ').map(n => n[0]).join('')}
+                                    {profile?.name?.split(' ').map(n => n[0]).join('') || user?.email?.substring(0, 2).toUpperCase()}
                                   </AvatarFallback>
                                 </Avatar>
                               </div>
@@ -532,11 +623,11 @@ const Profile = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                               <div className="space-y-2">
                                 <Label htmlFor="profile-name">Nome completo</Label>
-                                <Input id="profile-name" value={user.name} />
+                                <Input id="profile-name" value={profile?.name || ''} />
                               </div>
                               <div className="space-y-2">
                                 <Label htmlFor="profile-email">Email</Label>
-                                <Input id="profile-email" value={user.email} type="email" />
+                                <Input id="profile-email" value={profile?.email || user?.email || ''} type="email" />
                               </div>
                               <div className="space-y-2">
                                 <Label htmlFor="profile-bio">Biografia</Label>

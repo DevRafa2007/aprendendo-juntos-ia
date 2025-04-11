@@ -113,6 +113,447 @@ export type Database = {
         }
         Relationships: []
       }
+      student_progress_sync: {
+        Row: {
+          id: string
+          user_id: string
+          content_id: string
+          progress_percent: number
+          completed: boolean
+          last_position: Json | null
+          created_at: string
+          updated_at: string
+          last_synced_at: string
+          version: number
+          client_timestamp: number | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          content_id: string
+          progress_percent?: number
+          completed?: boolean
+          last_position?: Json | null
+          created_at?: string
+          updated_at?: string
+          last_synced_at?: string
+          version?: number
+          client_timestamp?: number | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          content_id?: string
+          progress_percent?: number
+          completed?: boolean
+          last_position?: Json | null
+          created_at?: string
+          updated_at?: string
+          last_synced_at?: string
+          version?: number
+          client_timestamp?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_progress_sync_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_progress_sync_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "contents"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      content_interactions: {
+        Row: {
+          id: string
+          user_id: string
+          content_id: string
+          interaction_type: string
+          interaction_data: Json | null
+          created_at: string
+          client_timestamp: number | null
+          synced: boolean
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          content_id: string
+          interaction_type: string
+          interaction_data?: Json | null
+          created_at?: string
+          client_timestamp?: number | null
+          synced?: boolean
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          content_id?: string
+          interaction_type?: string
+          interaction_data?: Json | null
+          created_at?: string
+          client_timestamp?: number | null
+          synced?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_interactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_interactions_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "contents"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      sync_queue: {
+        Row: {
+          id: string
+          user_id: string
+          queue_type: string
+          payload: Json
+          status: string
+          error_message: string | null
+          retry_count: number
+          created_at: string
+          updated_at: string
+          processed_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          queue_type: string
+          payload: Json
+          status?: string
+          error_message?: string | null
+          retry_count?: number
+          created_at?: string
+          updated_at?: string
+          processed_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          queue_type?: string
+          payload?: Json
+          status?: string
+          error_message?: string | null
+          retry_count?: number
+          created_at?: string
+          updated_at?: string
+          processed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_queue_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      user_sessions: {
+        Row: {
+          id: string
+          user_id: string
+          device_info: string | null
+          last_activity: string
+          is_online: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          device_info?: string | null
+          last_activity?: string
+          is_online?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          device_info?: string | null
+          last_activity?: string
+          is_online?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      course_reviews: {
+        Row: {
+          id: string
+          course_id: string
+          user_id: string
+          rating: number
+          title: string
+          comment: string
+          created_at: string
+          updated_at: string
+          is_verified: boolean
+          is_featured: boolean
+        }
+        Insert: {
+          id?: string
+          course_id: string
+          user_id: string
+          rating: number
+          title: string
+          comment: string
+          created_at?: string
+          updated_at?: string
+          is_verified?: boolean
+          is_featured?: boolean
+        }
+        Update: {
+          id?: string
+          course_id?: string
+          user_id?: string
+          rating?: number
+          title?: string
+          comment?: string
+          created_at?: string
+          updated_at?: string
+          is_verified?: boolean
+          is_featured?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_reviews_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_reviews_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      review_comments: {
+        Row: {
+          id: string
+          review_id: string
+          user_id: string
+          parent_id: string | null
+          comment: string
+          created_at: string
+          updated_at: string
+          is_deleted: boolean
+        }
+        Insert: {
+          id?: string
+          review_id: string
+          user_id: string
+          parent_id?: string | null
+          comment: string
+          created_at?: string
+          updated_at?: string
+          is_deleted?: boolean
+        }
+        Update: {
+          id?: string
+          review_id?: string
+          user_id?: string
+          parent_id?: string | null
+          comment?: string
+          created_at?: string
+          updated_at?: string
+          is_deleted?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_comments_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "course_reviews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "review_comments"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      review_reactions: {
+        Row: {
+          id: string
+          review_id: string
+          user_id: string
+          reaction_type: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          review_id: string
+          user_id: string
+          reaction_type: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          review_id?: string
+          user_id?: string
+          reaction_type?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_reactions_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "course_reviews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      review_reports: {
+        Row: {
+          id: string
+          review_id: string | null
+          comment_id: string | null
+          reporter_id: string
+          reason: string
+          details: string | null
+          status: string
+          created_at: string
+          updated_at: string
+          resolved_at: string | null
+          resolved_by: string | null
+        }
+        Insert: {
+          id?: string
+          review_id?: string | null
+          comment_id?: string | null
+          reporter_id: string
+          reason: string
+          details?: string | null
+          status?: string
+          created_at?: string
+          updated_at?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+        }
+        Update: {
+          id?: string
+          review_id?: string | null
+          comment_id?: string | null
+          reporter_id?: string
+          reason?: string
+          details?: string | null
+          status?: string
+          created_at?: string
+          updated_at?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_reports_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "course_reviews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_reports_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "review_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_reports_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      course_review_metrics: {
+        Row: {
+          course_id: string
+          total_reviews: number
+          avg_rating: number
+          rating_counts: Json
+          last_updated: string
+        }
+        Insert: {
+          course_id: string
+          total_reviews?: number
+          avg_rating?: number
+          rating_counts?: Json
+          last_updated?: string
+        }
+        Update: {
+          course_id?: string
+          total_reviews?: number
+          avg_rating?: number
+          rating_counts?: Json
+          last_updated?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_review_metrics_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: true
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never

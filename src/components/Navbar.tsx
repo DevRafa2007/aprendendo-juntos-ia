@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, Bell, MessageSquare, User, LogIn, LogOut } from 'lucide-react';
@@ -14,6 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import Logo from './Logo';
 import { useAuth } from '@/context/AuthContext';
+import SyncStatusIndicator from './SyncStatusIndicator';
 
 const Navbar = () => {
   const { user, profile, signOut } = useAuth();
@@ -60,6 +60,7 @@ const Navbar = () => {
 
           {isAuthenticated ? (
             <div className="flex items-center gap-4">
+              <SyncStatusIndicator />
               <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-brand-blue">
                 <Bell className="h-5 w-5" />
               </Button>
