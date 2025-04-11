@@ -408,6 +408,58 @@ export const getCorrectMediaUrl = (url: string | null): string => {
   return url;
 };
 
+/**
+ * Faz upload de um arquivo para o armazenamento
+ * @param file Arquivo a ser uploadado
+ * @param path Caminho no bucket onde o arquivo será armazenado
+ * @param options Opções de upload
+ * @returns URL pública do arquivo
+ */
+const uploadFile = async (
+  file: File,
+  path: string,
+  options?: {
+    onUploadProgress?: (progress: number) => void;
+    metadata?: Record<string, string>;
+  }
+): Promise<string> => {
+  try {
+    const { onUploadProgress, metadata } = options || {};
+    
+    const fileExt = file.name.split('.').pop();
+    const filePath = `${path}${uuidv4()}.${fileExt}`;
+
+    // Extract just the supported options for Supabase Storage
+    const storageOptions = {
+      cacheControl: '3600',
+      ...(metadata ? { metadata } : {})
+    };
+
+    const { error: uploadError, data } = await supabase.storage
+      .from(BUCKET_NAME)
+      .upload(filePath, file, storageOptions);
+
+    if (uploadError) {
+      console.error('Error uploading file:', uploadError);
+      throw new Error(`Failed to upload file: ${uploadError.message}`);
+    }
+
+    // Manually trigger the progress callback
+    if (onUploadProgress) {
+      onUploadProgress(100);
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from(BUCKET_NAME)
+      .getPublicUrl(filePath);
+
+    return publicUrl;
+  } catch (error) {
+    console.error('Error in uploadFile:', error);
+    throw error;
+  }
+};
+
 export default {
   uploadImage,
   uploadDocument,
@@ -418,4 +470,5 @@ export default {
   isImageFile,
   isDocumentFile,
   getCorrectMediaUrl,
-}; 
+  uploadFile,
+};

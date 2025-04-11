@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -8,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ThumbsUp, ThumbsDown, Flag, MoreVertical, MessageSquare, Check, MoreHorizontal } from 'lucide-react';
 import StarRating from './StarRating';
-import { CourseReview } from '@/services/reviewService';
+import { CourseReview, ReviewReaction } from '@/services/reviewService';
 import { reviewService } from '@/services/reviewService';
 import { useToast } from '@/components/ui/use-toast';
 import {
@@ -40,19 +41,19 @@ const ReviewItem: React.FC<ReviewItemProps> = ({
   const [showReportForm, setShowReportForm] = useState(false);
   const [reportReason, setReportReason] = useState<string>('');
   
-  // Verificar se o usuário atual é o autor da avaliação
+  // Check if current user is the author
   const isAuthor = currentUserId && currentUserId === review.user_id;
   
-  // Verificar se o usuário atual já reagiu à avaliação
+  // Check if current user has already reacted
   const userReaction = currentReview.reactions?.find(r => r.user_id === currentUserId)?.reaction_type;
   
-  // Formatar data de criação
+  // Format creation date
   const formattedDate = formatDistanceToNow(new Date(review.created_at), {
     addSuffix: true,
     locale: ptBR,
   });
   
-  // Adicionar ou remover reação
+  // Add or remove reaction
   const handleReaction = async (reactionType: 'helpful' | 'unhelpful') => {
     if (!currentUserId) {
       toast({
@@ -66,11 +67,11 @@ const ReviewItem: React.FC<ReviewItemProps> = ({
     setIsSubmitting(true);
     
     try {
-      // Se o usuário já reagiu com esse tipo, remove a reação
+      // If user already reacted with this type, remove reaction
       if (userReaction === reactionType) {
         await reviewService.removeReaction(currentReview.id, currentUserId);
         
-        // Atualizar o estado local
+        // Update local state
         const updatedReactions = currentReview.reactions?.filter(
           r => !(r.user_id === currentUserId && r.reaction_type === reactionType)
         ) || [];
@@ -84,7 +85,7 @@ const ReviewItem: React.FC<ReviewItemProps> = ({
       else {
         await reviewService.addReaction(currentReview.id, currentUserId, reactionType);
         
-        // Atualizar o estado local
+        // Update local state
         let updatedReactions = [...(currentReview.reactions || [])];
         const existingIndex = updatedReactions.findIndex(r => r.user_id === currentUserId);
         
@@ -119,7 +120,7 @@ const ReviewItem: React.FC<ReviewItemProps> = ({
     }
   };
   
-  // Enviar denúncia
+  // Send report
   const handleReport = async () => {
     if (!currentUserId) {
       toast({
@@ -168,7 +169,7 @@ const ReviewItem: React.FC<ReviewItemProps> = ({
     }
   };
   
-  // Contar reações
+  // Count reactions
   const helpfulCount = currentReview.reactions?.filter(r => r.reaction_type === 'helpful').length || 0;
   const unhelpfulCount = currentReview.reactions?.filter(r => r.reaction_type === 'unhelpful').length || 0;
   
@@ -333,4 +334,4 @@ const ReviewItem: React.FC<ReviewItemProps> = ({
   );
 };
 
-export default ReviewItem; 
+export default ReviewItem;

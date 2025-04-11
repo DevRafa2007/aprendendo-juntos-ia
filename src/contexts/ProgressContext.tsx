@@ -43,6 +43,9 @@ interface ProgressContextType {
   trackInteraction: (courseId: string, moduleId: string, contentId: string, interactionType: string, data?: Record<string, any>) => Promise<void>;
 }
 
+// Tipos de interação
+export type InteractionType = 'view' | 'download' | 'play' | 'pause' | 'complete' | 'scroll' | 'answer' | 'progress';
+
 // Valor padrão do contexto
 const defaultContextValue: ProgressContextType = {
   userProgress: null,
@@ -505,4 +508,4 @@ export const ProgressProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       {children}
     </ProgressContext.Provider>
   );
-}; 
+};

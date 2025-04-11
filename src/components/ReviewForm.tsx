@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -11,7 +12,7 @@ import { toast } from '@/components/ui/use-toast';
 import StarRating from './StarRating';
 import { reviewService, CourseReview, CourseReviewInsert } from '@/services/reviewService';
 
-// Esquema de validação para o formulário de avaliação
+// Review form validation schema
 const reviewFormSchema = z.object({
   title: z
     .string()
@@ -49,7 +50,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditing = !!initialData;
 
-  // Configurar hook useForm com zod resolver
+  // Setup form with zod resolver
   const form = useForm<ReviewFormValues>({
     resolver: zodResolver(reviewFormSchema),
     defaultValues: {
@@ -59,7 +60,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
     },
   });
 
-  // Verificar se o usuário pode avaliar este curso
+  // Check if user can review this course
   useEffect(() => {
     const checkEligibility = async () => {
       if (!isEditing) {
@@ -87,7 +88,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
     checkEligibility();
   }, [courseId, userId, isEditing, onCancel]);
 
-  // Verificar avaliação existente
+  // Check existing review
   useEffect(() => {
     const checkExistingReview = async () => {
       if (!isEditing) {
@@ -99,7 +100,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
               description: "Você já avaliou este curso. Você está editando sua avaliação anterior.",
             });
             
-            // Preencher formulário com dados existentes
+            // Fill form with existing data
             form.reset({
               title: existingReview.title,
               comment: existingReview.comment,
@@ -115,18 +116,18 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
     checkExistingReview();
   }, [courseId, userId, isEditing, form]);
 
-  // Função para enviar o formulário
+  // Submit the form
   const onSubmit = async (values: ReviewFormValues) => {
     setIsSubmitting(true);
 
     try {
-      // Verificar novamente se já existe uma avaliação
+      // Check again if review already exists
       const existingReview = await reviewService.getUserReviewForCourse(courseId, userId);
       
       let savedReview: CourseReview;
       
       if (isEditing || existingReview) {
-        // Atualizar avaliação existente
+        // Update existing review
         const reviewId = initialData?.id || existingReview?.id;
         
         if (!reviewId) {
@@ -143,15 +144,15 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
           description: "Sua avaliação foi atualizada com sucesso.",
         });
       } else {
-        // Criar nova avaliação
+        // Create new review
         const newReview: CourseReviewInsert = {
           course_id: courseId,
           user_id: userId,
           rating: values.rating,
           title: values.title,
           comment: values.comment,
-          is_verified: false, // Será verificado pelo administrador
-          is_featured: false, // Será destacado pelo administrador se for bom
+          is_verified: false, // Will be verified by admin
+          is_featured: false, // Will be featured by admin if good
         };
         
         savedReview = await reviewService.createReview(newReview);
@@ -162,7 +163,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
         });
       }
       
-      // Callback de sucesso
+      // Success callback
       onSuccess?.(savedReview);
       
     } catch (error) {
@@ -278,4 +279,4 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
   );
 };
 
-export default ReviewForm; 
+export default ReviewForm;

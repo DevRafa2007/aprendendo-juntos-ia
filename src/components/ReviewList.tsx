@@ -23,7 +23,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
-import { toast } from '@/components/ui/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { Star, Filter, SlidersHorizontal, Plus } from 'lucide-react';
 import {
   Sheet,
@@ -36,7 +36,13 @@ import {
 } from '@/components/ui/sheet';
 import ReviewItem from './ReviewItem';
 import ReviewForm from './ReviewForm';
-import { reviewService, CourseReview, ReviewListOptions, PaginationResult } from '@/services/reviewService';
+import { 
+  reviewService, 
+  CourseReview, 
+  ReviewListOptions, 
+  PaginationResult, 
+  CourseReviewMetrics 
+} from '@/services/reviewService';
 
 interface ReviewListProps {
   courseId: string;
@@ -45,30 +51,27 @@ interface ReviewListProps {
 
 const ReviewList: React.FC<ReviewListProps> = ({ courseId, className }) => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [reviews, setReviews] = useState<CourseReview[]>([]);
-  const [metrics, setMetrics] = useState<{
-    avgRating: number;
-    totalReviews: number;
-    ratingCounts: { [key: string]: number };
-  } | null>(null);
+  const [metrics, setMetrics] = useState<CourseReviewMetrics | null>(null);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   
-  // Estados para filtros
+  // States for filters
   const [sortBy, setSortBy] = useState<'date' | 'rating' | 'helpful'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [ratingFilter, setRatingFilter] = useState<number[]>([]);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
 
-  // Carregar avaliações com base nos filtros atuais
+  // Load reviews based on current filters
   const loadReviews = async (page = 1) => {
     setLoading(true);
     
     try {
-      // Configurar opções de filtro
+      // Configure filter options
       const options: ReviewListOptions = {
         courseId,
         page,
@@ -78,13 +81,13 @@ const ReviewList: React.FC<ReviewListProps> = ({ courseId, className }) => {
         verifiedOnly,
       };
       
-      // Adicionar filtro de classificação se houver
+      // Add rating filter if present
       if (ratingFilter.length > 0) {
         options.ratingFilter = ratingFilter;
       }
       
-      // Buscar avaliações
-      const result: PaginationResult<CourseReview> = await reviewService.listCourseReviews(options);
+      // Fetch reviews
+      const result = await reviewService.listCourseReviews(options);
       
       setReviews(result.data);
       setCurrentPage(result.page);
@@ -102,40 +105,36 @@ const ReviewList: React.FC<ReviewListProps> = ({ courseId, className }) => {
     }
   };
   
-  // Carregar métricas de avaliação
+  // Load review metrics
   const loadMetrics = async () => {
     try {
-      const data = await reviewService.getCourseReviewMetrics(courseId);
-      if (data) {
-        setMetrics({
-          avgRating: data.avg_rating,
-          totalReviews: data.total_reviews,
-          ratingCounts: data.rating_counts as { [key: string]: number },
-        });
+      const metricsData = await reviewService.getCourseReviewMetrics(courseId);
+      if (metricsData) {
+        setMetrics(metricsData);
       }
     } catch (error) {
       console.error('Erro ao carregar métricas de avaliação:', error);
     }
   };
   
-  // Carregar dados ao montar o componente ou quando os filtros mudarem
+  // Load data when component mounts or filters change
   useEffect(() => {
-    loadReviews(1); // Voltar para a primeira página ao mudar filtros
+    loadReviews(1); // Go back to first page when filters change
     
-    // Carregar métricas apenas uma vez
+    // Load metrics only once
     if (!metrics) {
       loadMetrics();
     }
   }, [courseId, sortBy, sortOrder, ratingFilter, verifiedOnly]);
   
-  // Função para atualizar a página
+  // Function to update page
   const handlePageChange = (page: number) => {
     if (page < 1 || page > totalPages) return;
     setCurrentPage(page);
     loadReviews(page);
   };
   
-  // Função para limpar todos os filtros
+  // Function to clear all filters
   const clearFilters = () => {
     setSortBy('date');
     setSortOrder('desc');
@@ -143,30 +142,30 @@ const ReviewList: React.FC<ReviewListProps> = ({ courseId, className }) => {
     setVerifiedOnly(false);
   };
   
-  // Função para aplicar filtro de classificação
+  // Function to apply rating filter
   const handleRatingFilterChange = (rating: number) => {
     setRatingFilter(prev => {
-      // Se já existe no filtro, remover
+      // If already in filter, remove
       if (prev.includes(rating)) {
         return prev.filter(r => r !== rating);
       }
-      // Caso contrário, adicionar
+      // Otherwise, add
       return [...prev, rating];
     });
   };
   
-  // Função para lidar com a submissão de uma nova avaliação
+  // Function to handle new review submission
   const handleReviewSubmitted = (review: CourseReview) => {
     setShowReviewForm(false);
     
-    // Atualizar lista de avaliações
+    // Update review list
     loadReviews(currentPage);
     
-    // Atualizar métricas
+    // Update metrics
     loadMetrics();
   };
   
-  // Renderizar esqueletos de carregamento
+  // Render loading skeletons
   const renderSkeletons = () => {
     return Array(5)
       .fill(0)
@@ -190,33 +189,31 @@ const ReviewList: React.FC<ReviewListProps> = ({ courseId, className }) => {
       ));
   };
   
-  // Renderizar métricas de avaliação
+  // Render review metrics
   const renderMetrics = () => {
     if (!metrics) return null;
-    
-    const { avgRating, totalReviews, ratingCounts } = metrics;
     
     return (
       <div className="p-4 bg-slate-50 rounded-lg">
         <h3 className="text-lg font-semibold mb-2">Avaliações dos alunos</h3>
         
         <div className="flex items-center gap-2 mb-4">
-          <span className="text-3xl font-bold">{avgRating.toFixed(1)}</span>
+          <span className="text-3xl font-bold">{metrics.avg_rating.toFixed(1)}</span>
           <div className="flex items-center">
             {[1, 2, 3, 4, 5].map(star => (
               <Star
                 key={star}
-                className={`h-5 w-5 ${star <= Math.round(avgRating) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}
+                className={`h-5 w-5 ${star <= Math.round(metrics.avg_rating) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}
               />
             ))}
           </div>
-          <span className="text-sm text-gray-500">({totalReviews} avaliações)</span>
+          <span className="text-sm text-gray-500">({metrics.total_reviews} avaliações)</span>
         </div>
         
         <div className="space-y-2">
           {[5, 4, 3, 2, 1].map(rating => {
-            const count = ratingCounts[rating.toString()] || 0;
-            const percentage = totalReviews > 0 ? (count / totalReviews) * 100 : 0;
+            const count = metrics.rating_counts[rating.toString()] || 0;
+            const percentage = metrics.total_reviews > 0 ? (count / metrics.total_reviews) * 100 : 0;
             
             return (
               <div key={rating} className="flex items-center gap-2">
@@ -516,4 +513,4 @@ const ReviewList: React.FC<ReviewListProps> = ({ courseId, className }) => {
   );
 };
 
-export default ReviewList; 
+export default ReviewList;

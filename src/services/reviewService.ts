@@ -1,22 +1,81 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
+import { Json } from '@/integrations/supabase/types';
 
-// Tipos para reviews e comentários
-export type CourseReview = Tables<'course_reviews'>;
-export type ReviewComment = Tables<'review_comments'>;
-export type ReviewReaction = Tables<'review_reactions'>;
-export type CourseReviewMetrics = Tables<'course_review_metrics'>;
+// Extended types for reviews and related entities with additional fields needed by UI
+export interface CourseReview {
+  id: string;
+  course_id: string;
+  user_id: string;
+  rating: number;
+  title: string; // Added field required by UI
+  comment: string;
+  created_at: string;
+  updated_at: string;
+  is_verified?: boolean; // Added field required by UI
+  is_featured?: boolean; // Added field required by UI
+  user?: { // Added field required by UI
+    id: string;
+    full_name?: string;
+    avatar_url?: string;
+  };
+  reactions?: ReviewReaction[]; // Added field required by UI
+}
 
-// Tipo para inserção de review
-export type CourseReviewInsert = TablesInsert<'course_reviews'>;
+export interface ReviewReaction {
+  review_id: string;
+  user_id: string;
+  reaction_type: 'helpful' | 'unhelpful';
+  created_at: string;
+}
 
-// Tipo para inserção de comentário
-export type ReviewCommentInsert = TablesInsert<'review_comments'>;
+export interface ReviewComment {
+  id: string;
+  review_id: string;
+  user_id: string;
+  parent_id?: string;
+  comment: string;
+  created_at: string;
+  updated_at: string;
+  is_deleted: boolean;
+  user?: {
+    id: string;
+    name?: string;
+    avatar_url?: string;
+  };
+}
 
-// Tipo para reações
+export interface CourseReviewMetrics {
+  course_id: string;
+  total_reviews: number;
+  avg_rating: number;
+  rating_counts: { [key: string]: number };
+  last_updated: string;
+}
+
+// Type for inserting new review
+export interface CourseReviewInsert {
+  course_id: string;
+  user_id: string;
+  rating: number;
+  title: string;
+  comment: string;
+  is_verified?: boolean;
+  is_featured?: boolean;
+}
+
+// Type for inserting new comment
+export type ReviewCommentInsert = {
+  review_id: string;
+  user_id: string;
+  parent_id?: string;
+  comment: string;
+};
+
+// Type for reações
 export type ReactionType = 'helpful' | 'unhelpful';
 
-// Tipo para filtragem e ordenação de reviews
+// Type for filtering and sorting reviews
 export interface ReviewListOptions {
   courseId: string;
   limit?: number;
@@ -27,7 +86,7 @@ export interface ReviewListOptions {
   verifiedOnly?: boolean;
 }
 
-// Interface para paginação
+// Interface for pagination
 export interface PaginationResult<T> {
   data: T[];
   total: number;
@@ -37,13 +96,11 @@ export interface PaginationResult<T> {
 }
 
 /**
- * Serviço para gerenciar avaliações e comentários de cursos
+ * Service for managing course reviews and comments
  */
 class ReviewService {
   /**
-   * Cria uma nova avaliação para um curso
-   * @param data Dados da avaliação
-   * @returns Avaliação criada
+   * Creates a new review for a course
    */
   async createReview(data: CourseReviewInsert): Promise<CourseReview> {
     const { data: review, error } = await supabase
@@ -53,70 +110,59 @@ class ReviewService {
       .single();
 
     if (error) {
-      console.error('Erro ao criar avaliação:', error);
-      throw new Error(`Falha ao criar avaliação: ${error.message}`);
+      console.error('Error creating review:', error);
+      throw new Error(`Failed to create review: ${error.message}`);
     }
 
-    return review;
+    return review as CourseReview;
   }
 
   /**
-   * Obtém uma avaliação específica pelo ID
-   * @param reviewId ID da avaliação
-   * @returns Avaliação encontrada ou null
+   * Gets a specific review by ID
    */
   async getReviewById(reviewId: string): Promise<CourseReview | null> {
     const { data, error } = await supabase
       .from('course_reviews')
       .select(`
         *,
-        user:profiles(id, name, avatar_url),
-        reactions:review_reactions(id, user_id, reaction_type),
-        comments:review_comments(
-          id, comment, created_at, is_deleted,
-          user:profiles(id, name, avatar_url)
-        )
+        user:profiles(id, name:full_name, avatar_url),
+        reactions:review_reactions(id, user_id, reaction_type)
       `)
       .eq('id', reviewId)
       .single();
 
     if (error) {
       if (error.code === 'PGRST116') {
-        return null; // Não encontrado
+        return null; // Not found
       }
-      console.error('Erro ao buscar avaliação:', error);
-      throw new Error(`Falha ao buscar avaliação: ${error.message}`);
+      console.error('Error fetching review:', error);
+      throw new Error(`Failed to fetch review: ${error.message}`);
     }
 
-    return data;
+    return data as CourseReview;
   }
 
   /**
-   * Atualiza uma avaliação existente
-   * @param reviewId ID da avaliação
-   * @param data Dados a serem atualizados
-   * @returns Avaliação atualizada
+   * Updates an existing review
    */
-  async updateReview(reviewId: string, data: TablesUpdate<'course_reviews'>): Promise<CourseReview> {
+  async updateReview(reviewId: string, updates: Partial<CourseReview>): Promise<CourseReview> {
     const { data: review, error } = await supabase
       .from('course_reviews')
-      .update(data)
+      .update(updates)
       .eq('id', reviewId)
       .select('*')
       .single();
 
     if (error) {
-      console.error('Erro ao atualizar avaliação:', error);
-      throw new Error(`Falha ao atualizar avaliação: ${error.message}`);
+      console.error('Error updating review:', error);
+      throw new Error(`Failed to update review: ${error.message}`);
     }
 
-    return review;
+    return review as CourseReview;
   }
 
   /**
-   * Exclui uma avaliação
-   * @param reviewId ID da avaliação
-   * @returns true se excluído com sucesso
+   * Deletes a review
    */
   async deleteReview(reviewId: string): Promise<boolean> {
     const { error } = await supabase
@@ -125,17 +171,15 @@ class ReviewService {
       .eq('id', reviewId);
 
     if (error) {
-      console.error('Erro ao excluir avaliação:', error);
-      throw new Error(`Falha ao excluir avaliação: ${error.message}`);
+      console.error('Error deleting review:', error);
+      throw new Error(`Failed to delete review: ${error.message}`);
     }
 
     return true;
   }
 
   /**
-   * Lista avaliações de um curso com paginação e filtros
-   * @param options Opções de filtragem e ordenação
-   * @returns Resultado paginado de avaliações
+   * Lists reviews for a course with pagination and filters
    */
   async listCourseReviews(options: ReviewListOptions): Promise<PaginationResult<CourseReview>> {
     const {
@@ -148,258 +192,296 @@ class ReviewService {
       verifiedOnly = false
     } = options;
 
-    // Calcular o offset para paginação
+    // Calculate offset for pagination
     const offset = (page - 1) * limit;
 
-    // Iniciar a query
-    let query = supabase
-      .from('course_reviews')
-      .select(`
-        *,
-        user:profiles(id, name, avatar_url),
-        reactions:review_reactions(id, user_id, reaction_type),
-        comments:review_comments!inner(
-          id, user_id, comment, created_at, is_deleted,
-          user:profiles(id, name, avatar_url)
-        ),
-        count() OVER()
-      `, { count: 'exact' })
-      .eq('course_id', courseId);
+    try {
+      // Start the query
+      let query = supabase
+        .from('course_reviews')
+        .select(`
+          *,
+          user:profiles(id, full_name, avatar_url),
+          reactions:review_reactions(id, user_id, reaction_type)
+        `, { count: 'exact' })
+        .eq('course_id', courseId);
 
-    // Aplicar filtros adicionais
-    if (verifiedOnly) {
-      query = query.eq('is_verified', true);
+      // Apply additional filters
+      if (verifiedOnly) {
+        query = query.eq('is_verified', true);
+      }
+
+      if (ratingFilter && ratingFilter.length > 0) {
+        query = query.in('rating', ratingFilter);
+      }
+
+      // Apply sorting
+      if (sortBy === 'date') {
+        query = query.order('created_at', { ascending: sortOrder === 'asc' });
+      } else if (sortBy === 'rating') {
+        query = query.order('rating', { ascending: sortOrder === 'asc' });
+      } else if (sortBy === 'helpful') {
+        // This would ideally be a more complex query that counts helpful reactions
+        query = query.order('created_at', { ascending: false });
+      }
+
+      // Apply pagination
+      query = query.range(offset, offset + limit - 1);
+
+      // Execute the query
+      const { data, error, count } = await query;
+
+      if (error) {
+        console.error('Error listing reviews:', error);
+        throw error;
+      }
+
+      // Calculate total pages
+      const totalPages = count ? Math.ceil(count / limit) : 0;
+
+      return {
+        data: data as CourseReview[],
+        total: count || 0,
+        page,
+        limit,
+        totalPages
+      };
+    } catch (error) {
+      console.error('Error in listCourseReviews:', error);
+      throw error;
     }
-
-    if (ratingFilter && ratingFilter.length > 0) {
-      query = query.in('rating', ratingFilter);
-    }
-
-    // Aplicar ordenação
-    if (sortBy === 'date') {
-      query = query.order('created_at', { ascending: sortOrder === 'asc' });
-    } else if (sortBy === 'rating') {
-      query = query.order('rating', { ascending: sortOrder === 'asc' });
-    } else if (sortBy === 'helpful') {
-      // Ordenação por mais útil requer junção adicional
-      // Implementar contagem de reações úteis
-      query = query.order('created_at', { ascending: false });
-    }
-
-    // Aplicar paginação
-    query = query.range(offset, offset + limit - 1);
-
-    // Executar a query
-    const { data, error, count } = await query;
-
-    if (error) {
-      console.error('Erro ao listar avaliações:', error);
-      throw new Error(`Falha ao listar avaliações: ${error.message}`);
-    }
-
-    // Calcular total de páginas
-    const totalPages = count ? Math.ceil(count / limit) : 0;
-
-    return {
-      data: data || [],
-      total: count || 0,
-      page,
-      limit,
-      totalPages
-    };
   }
 
   /**
-   * Obtém as métricas de avaliação de um curso
-   * @param courseId ID do curso
-   * @returns Métricas de avaliação
+   * Gets review metrics for a course
    */
   async getCourseReviewMetrics(courseId: string): Promise<CourseReviewMetrics | null> {
-    const { data, error } = await supabase
-      .from('course_review_metrics')
-      .select('*')
-      .eq('course_id', courseId)
-      .maybeSingle();
+    try {
+      // This would typically be provided by a dedicated view or function
+      // For now, we'll calculate metrics on the fly
+      const { data: reviews, error, count } = await supabase
+        .from('course_reviews')
+        .select('rating', { count: 'exact' })
+        .eq('course_id', courseId);
 
-    if (error) {
-      console.error('Erro ao obter métricas de avaliação:', error);
-      throw new Error(`Falha ao obter métricas de avaliação: ${error.message}`);
+      if (error) {
+        console.error('Error fetching review metrics:', error);
+        throw error;
+      }
+
+      if (!reviews || reviews.length === 0) {
+        return {
+          course_id: courseId,
+          total_reviews: 0,
+          avg_rating: 0,
+          rating_counts: { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 },
+          last_updated: new Date().toISOString()
+        };
+      }
+
+      // Calculate average rating
+      const sum = reviews.reduce((acc, review) => acc + review.rating, 0);
+      const avgRating = sum / reviews.length;
+
+      // Calculate rating counts
+      const ratingCounts: { [key: string]: number } = { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 };
+      reviews.forEach(review => {
+        const ratingKey = review.rating.toString();
+        ratingCounts[ratingKey] = (ratingCounts[ratingKey] || 0) + 1;
+      });
+
+      return {
+        course_id: courseId,
+        total_reviews: count || reviews.length,
+        avg_rating,
+        rating_counts: ratingCounts,
+        last_updated: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error('Error in getCourseReviewMetrics:', error);
+      return null;
     }
-
-    return data;
   }
 
   /**
-   * Adiciona um comentário a uma avaliação
-   * @param data Dados do comentário
-   * @returns Comentário criado
+   * Adds a comment to a review
    */
   async addComment(data: ReviewCommentInsert): Promise<ReviewComment> {
-    const { data: comment, error } = await supabase
-      .from('review_comments')
-      .insert(data)
-      .select(`
-        *,
-        user:profiles(id, name, avatar_url)
-      `)
-      .single();
+    try {
+      const { data: comment, error } = await supabase
+        .from('review_comments')
+        .insert(data)
+        .select(`
+          *,
+          user:profiles(id, name, avatar_url)
+        `)
+        .single();
 
-    if (error) {
-      console.error('Erro ao adicionar comentário:', error);
-      throw new Error(`Falha ao adicionar comentário: ${error.message}`);
+      if (error) {
+        console.error('Error adding comment:', error);
+        throw error;
+      }
+
+      return comment as unknown as ReviewComment;
+    } catch (error) {
+      console.error('Error in addComment:', error);
+      throw error;
     }
-
-    return comment;
   }
 
   /**
-   * Obtém comentários de uma avaliação
-   * @param reviewId ID da avaliação
-   * @returns Lista de comentários
+   * Gets comments for a review
    */
   async getReviewComments(reviewId: string): Promise<ReviewComment[]> {
-    const { data, error } = await supabase
-      .from('review_comments')
-      .select(`
-        *,
-        user:profiles(id, name, avatar_url),
-        children:review_comments(
-          id, comment, created_at, user_id, parent_id, is_deleted,
+    try {
+      const { data, error } = await supabase
+        .from('review_comments')
+        .select(`
+          *,
           user:profiles(id, name, avatar_url)
-        )
-      `)
-      .eq('review_id', reviewId)
-      .is('parent_id', null) // Apenas comentários raiz
-      .order('created_at', { ascending: true });
+        `)
+        .eq('review_id', reviewId)
+        .is('parent_id', null) // Only root comments
+        .order('created_at', { ascending: true });
 
-    if (error) {
-      console.error('Erro ao buscar comentários:', error);
-      throw new Error(`Falha ao buscar comentários: ${error.message}`);
+      if (error) {
+        console.error('Error fetching comments:', error);
+        throw error;
+      }
+
+      return data as unknown as ReviewComment[];
+    } catch (error) {
+      console.error('Error in getReviewComments:', error);
+      return [];
     }
-
-    return data || [];
   }
 
   /**
-   * Marca um comentário como excluído (soft delete)
-   * @param commentId ID do comentário
-   * @returns Comentário atualizado
+   * Marks a comment as deleted (soft delete)
    */
   async deleteComment(commentId: string): Promise<ReviewComment> {
-    const { data: comment, error } = await supabase
-      .from('review_comments')
-      .update({ is_deleted: true })
-      .eq('id', commentId)
-      .select('*')
-      .single();
+    try {
+      const { data: comment, error } = await supabase
+        .from('review_comments')
+        .update({ is_deleted: true })
+        .eq('id', commentId)
+        .select('*')
+        .single();
 
-    if (error) {
-      console.error('Erro ao excluir comentário:', error);
-      throw new Error(`Falha ao excluir comentário: ${error.message}`);
+      if (error) {
+        console.error('Error deleting comment:', error);
+        throw error;
+      }
+
+      return comment as unknown as ReviewComment;
+    } catch (error) {
+      console.error('Error in deleteComment:', error);
+      throw error;
     }
-
-    return comment;
   }
 
   /**
-   * Adiciona ou atualiza uma reação a uma avaliação
-   * @param reviewId ID da avaliação
-   * @param userId ID do usuário
-   * @param reactionType Tipo de reação ('helpful' ou 'unhelpful')
-   * @returns Reação criada ou atualizada
+   * Adds or updates a reaction to a review
    */
   async addReaction(reviewId: string, userId: string, reactionType: ReactionType): Promise<ReviewReaction> {
-    // Verificar se o usuário já reagiu a esta avaliação
-    const { data: existingReaction } = await supabase
-      .from('review_reactions')
-      .select('*')
-      .eq('review_id', reviewId)
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (existingReaction) {
-      // Se já existe uma reação, atualizá-la
-      const { data: reaction, error } = await supabase
+    try {
+      // Check if user already reacted to this review
+      const { data: existingReaction } = await supabase
         .from('review_reactions')
-        .update({ reaction_type: reactionType })
-        .eq('id', existingReaction.id)
         .select('*')
-        .single();
+        .eq('review_id', reviewId)
+        .eq('user_id', userId)
+        .maybeSingle();
 
-      if (error) {
-        console.error('Erro ao atualizar reação:', error);
-        throw new Error(`Falha ao atualizar reação: ${error.message}`);
+      if (existingReaction) {
+        // If reaction exists, update it
+        const { data: reaction, error } = await supabase
+          .from('review_reactions')
+          .update({ reaction_type: reactionType })
+          .eq('id', existingReaction.id)
+          .select('*')
+          .single();
+
+        if (error) {
+          console.error('Error updating reaction:', error);
+          throw error;
+        }
+
+        return reaction as unknown as ReviewReaction;
+      } else {
+        // Otherwise, create new reaction
+        const { data: reaction, error } = await supabase
+          .from('review_reactions')
+          .insert({
+            review_id: reviewId,
+            user_id: userId,
+            reaction_type: reactionType
+          })
+          .select('*')
+          .single();
+
+        if (error) {
+          console.error('Error adding reaction:', error);
+          throw error;
+        }
+
+        return reaction as unknown as ReviewReaction;
       }
-
-      return reaction;
-    } else {
-      // Caso contrário, criar uma nova reação
-      const { data: reaction, error } = await supabase
-        .from('review_reactions')
-        .insert({
-          review_id: reviewId,
-          user_id: userId,
-          reaction_type: reactionType
-        })
-        .select('*')
-        .single();
-
-      if (error) {
-        console.error('Erro ao adicionar reação:', error);
-        throw new Error(`Falha ao adicionar reação: ${error.message}`);
-      }
-
-      return reaction;
+    } catch (error) {
+      console.error('Error in addReaction:', error);
+      throw error;
     }
   }
 
   /**
-   * Remove uma reação de uma avaliação
-   * @param reviewId ID da avaliação
-   * @param userId ID do usuário
-   * @returns true se removido com sucesso
+   * Removes a reaction from a review
    */
   async removeReaction(reviewId: string, userId: string): Promise<boolean> {
-    const { error } = await supabase
-      .from('review_reactions')
-      .delete()
-      .eq('review_id', reviewId)
-      .eq('user_id', userId);
+    try {
+      const { error } = await supabase
+        .from('review_reactions')
+        .delete()
+        .eq('review_id', reviewId)
+        .eq('user_id', userId);
 
-    if (error) {
-      console.error('Erro ao remover reação:', error);
-      throw new Error(`Falha ao remover reação: ${error.message}`);
+      if (error) {
+        console.error('Error removing reaction:', error);
+        throw error;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error in removeReaction:', error);
+      throw error;
     }
-
-    return true;
   }
 
   /**
-   * Verifica se o usuário já avaliou um curso
-   * @param courseId ID do curso
-   * @param userId ID do usuário
-   * @returns Avaliação existente ou null
+   * Checks if user has already reviewed a course
    */
   async getUserReviewForCourse(courseId: string, userId: string): Promise<CourseReview | null> {
-    const { data, error } = await supabase
-      .from('course_reviews')
-      .select('*')
-      .eq('course_id', courseId)
-      .eq('user_id', userId)
-      .maybeSingle();
+    try {
+      const { data, error } = await supabase
+        .from('course_reviews')
+        .select('*')
+        .eq('course_id', courseId)
+        .eq('user_id', userId)
+        .maybeSingle();
 
-    if (error) {
-      console.error('Erro ao verificar avaliação do usuário:', error);
-      throw new Error(`Falha ao verificar avaliação: ${error.message}`);
+      if (error) {
+        console.error('Error checking user review:', error);
+        throw error;
+      }
+
+      return data as CourseReview;
+    } catch (error) {
+      console.error('Error in getUserReviewForCourse:', error);
+      throw error;
     }
-
-    return data;
   }
 
   /**
-   * Denunciar uma avaliação ou comentário
-   * @param reportData Dados da denúncia
-   * @returns ID da denúncia criada
+   * Reports a review or comment
    */
   async reportContent(reportData: {
     reviewId?: string;
@@ -408,60 +490,68 @@ class ReviewService {
     reason: string;
     details?: string;
   }): Promise<string> {
-    const { reviewId, commentId, reporterId, reason, details } = reportData;
+    try {
+      const { reviewId, commentId, reporterId, reason, details } = reportData;
 
-    if (!reviewId && !commentId) {
-      throw new Error('É necessário fornecer reviewId ou commentId');
+      if (!reviewId && !commentId) {
+        throw new Error('You must provide either reviewId or commentId');
+      }
+
+      // Using a custom table for reports
+      const { data, error } = await supabase
+        .from('review_reports')
+        .insert({
+          review_id: reviewId || null,
+          comment_id: commentId || null,
+          reporter_id: reporterId,
+          reason,
+          details: details || null,
+          status: 'pending'
+        })
+        .select('id')
+        .single();
+
+      if (error) {
+        console.error('Error reporting content:', error);
+        throw error;
+      }
+
+      return data.id;
+    } catch (error) {
+      console.error('Error in reportContent:', error);
+      throw error;
     }
-
-    const { data, error } = await supabase
-      .from('review_reports')
-      .insert({
-        review_id: reviewId || null,
-        comment_id: commentId || null,
-        reporter_id: reporterId,
-        reason,
-        details: details || null,
-        status: 'pending'
-      })
-      .select('id')
-      .single();
-
-    if (error) {
-      console.error('Erro ao denunciar conteúdo:', error);
-      throw new Error(`Falha ao denunciar conteúdo: ${error.message}`);
-    }
-
-    return data.id;
   }
 
   /**
-   * Verificar se o usuário pode avaliar um curso
-   * (usuário deve estar matriculado)
-   * @param courseId ID do curso
-   * @param userId ID do usuário
-   * @returns true se pode avaliar
+   * Checks if user can review a course
+   * (user must be enrolled)
    */
   async canReviewCourse(courseId: string, userId: string): Promise<boolean> {
-    // Verificar se o usuário está matriculado no curso
-    const { data, error } = await supabase
-      .from('enrollments')
-      .select('id')
-      .eq('course_id', courseId)
-      .eq('user_id', userId)
-      .maybeSingle();
+    try {
+      // Check if user is enrolled in the course
+      const { data, error } = await supabase
+        .from('enrollments')
+        .select('id')
+        .eq('course_id', courseId)
+        .eq('user_id', userId)
+        .maybeSingle();
 
-    if (error) {
-      console.error('Erro ao verificar matrícula:', error);
-      throw new Error(`Falha ao verificar matrícula: ${error.message}`);
+      if (error) {
+        console.error('Error checking enrollment:', error);
+        throw error;
+      }
+
+      return !!data;
+    } catch (error) {
+      console.error('Error in canReviewCourse:', error);
+      throw error;
     }
-
-    return !!data;
   }
 }
 
-// Exportar instância do serviço
+// Export service instance
 export const reviewService = new ReviewService();
 
-// Também exportar a classe para testes e casos especiais
-export { ReviewService }; 
+// Also export the class for testing and special cases
+export { ReviewService };

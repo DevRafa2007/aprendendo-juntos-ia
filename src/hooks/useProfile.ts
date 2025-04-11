@@ -12,7 +12,7 @@ export interface ProfileType {
   avatar_url: string | null;
   created_at: string;
   updated_at: string;
-  social_links?: { [key: string]: string } | Json | null;
+  social_links?: Record<string, string> | null;
 }
 
 export function useProfile(userId?: string) {
@@ -55,7 +55,8 @@ export function useProfile(userId?: string) {
           avatar_url: data.avatar_url,
           created_at: data.created_at,
           updated_at: data.updated_at,
-          social_links: data.social_links
+          // Convert Json to Record<string, string>
+          social_links: data.social_links ? data.social_links as Record<string, string> : null
         };
         setProfile(profileData);
       } catch (error: any) {
@@ -115,7 +116,8 @@ export function useProfile(userId?: string) {
         avatar_url: data.avatar_url,
         created_at: data.created_at,
         updated_at: data.updated_at,
-        social_links: data.social_links
+        // Convert Json to Record<string, string>
+        social_links: data.social_links ? data.social_links as Record<string, string> : null
       };
       setProfile(profileData);
       toast({
