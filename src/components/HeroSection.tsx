@@ -18,9 +18,11 @@ const HeroSection = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Link to="/cursos">
-                <Button size="lg" variant="primary" className="font-medium">
-                  Explorar Cursos
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                <Button size="lg" className="bg-white font-medium">
+                  <span className="bg-gradient-to-r from-brand-blue to-brand-green bg-clip-text text-transparent font-bold">
+                    Explorar Cursos
+                  </span>
+                  <ArrowRight className="ml-2 h-5 w-5 text-brand-blue" />
                 </Button>
               </Link>
               <Link to="/criar-curso">

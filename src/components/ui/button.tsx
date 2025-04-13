@@ -22,6 +22,7 @@ const buttonVariants = cva(
         gradient: "bg-gradient-to-r from-brand-blue to-brand-green text-white hover:shadow-md shadow-sm transition-all duration-300 ease-in-out hover:scale-[1.02]",
         primary: "bg-brand-blue text-white hover:bg-brand-blue/90 shadow-sm hover:shadow-md transition-all duration-300 ease-in-out transform hover:translate-y-[-2px]",
         success: "bg-brand-green text-white hover:bg-brand-green/90 shadow-sm hover:shadow-md transition-all duration-300 ease-in-out transform hover:translate-y-[-2px]",
+        gradientText: "bg-white text-transparent bg-clip-text bg-gradient-to-r from-brand-blue to-brand-green hover:bg-white hover:shadow-md shadow-sm transition-all duration-300 ease-in-out transform hover:translate-y-[-2px]",
       },
       size: {
         default: "h-10 px-4 py-2",
