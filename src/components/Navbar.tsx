@@ -84,10 +84,10 @@ const Navbar = () => {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link to="/perfil" className="cursor-pointer">Meu Perfil</Link>
+                    <Link to="/perfil" className="cursor-pointer hover:bg-accent hover:text-accent-foreground w-full">Meu Perfil</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/meus-cursos" className="cursor-pointer">Meus Cursos</Link>
+                    <Link to="/meus-cursos" className="cursor-pointer hover:bg-accent hover:text-accent-foreground w-full">Meus Cursos</Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive cursor-pointer">
