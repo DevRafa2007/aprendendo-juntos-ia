@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ArrowRight, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,13 +18,13 @@ const HeroSection = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Link to="/cursos">
-                <Button size="lg" className="bg-white text-brand-blue hover:bg-white/90">
+                <Button size="lg" variant="primary" className="font-medium">
                   Explorar Cursos
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
               <Link to="/criar-curso">
-                <Button size="lg" className="text-white border border-white hover:bg-white/10 bg-transparent">
+                <Button size="lg" variant="outline" className="bg-white/10 text-white border-white hover:bg-white/20 hover:text-white font-medium">
                   Criar um Curso
                 </Button>
               </Link>

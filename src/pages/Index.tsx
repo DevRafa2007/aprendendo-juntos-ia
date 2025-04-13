@@ -1,3 +1,4 @@
+
 import React from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -226,7 +227,7 @@ const Index = () => {
               <h2 className="text-2xl md:text-3xl font-bold mb-4">Compartilhe seu conhecimento</h2>
               <p className="text-lg mb-6">Crie seu curso e alcance estudantes de todo o Brasil. Defina seu próprio preço e comece a ensinar!</p>
               <Link to="/criar-curso">
-                <Button size="lg" className="bg-white text-brand-blue hover:bg-white/90">
+                <Button size="lg" variant="success" className="font-medium">
                   Começar a Ensinar
                 </Button>
               </Link>
@@ -276,7 +277,7 @@ const Index = () => {
                   placeholder="Seu melhor email"
                   className="px-4 py-3 rounded-lg w-full text-black"
                 />
-                <Button className="bg-brand-yellow text-black hover:bg-brand-yellow/90 whitespace-nowrap">
+                <Button variant="primary" className="font-medium whitespace-nowrap">
                   Inscrever-se
                 </Button>
               </div>
