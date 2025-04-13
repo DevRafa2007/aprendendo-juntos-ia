@@ -226,8 +226,8 @@ const Index = () => {
               <h2 className="text-2xl md:text-3xl font-bold mb-4">Compartilhe seu conhecimento</h2>
               <p className="text-lg mb-6">Crie seu curso e alcance estudantes de todo o Brasil. Defina seu próprio preço e comece a ensinar!</p>
               <Link to="/criar-curso">
-                <Button size="lg" className="bg-white hover:bg-white/95 shadow-md">
-                  <span className="bg-gradient-to-r from-brand-blue to-brand-green bg-clip-text text-transparent font-semibold">
+                <Button size="lg" className="bg-white hover:bg-white/95 shadow-md font-medium">
+                  <span className="bg-gradient-to-r from-brand-blue to-brand-green bg-clip-text text-transparent font-bold">
                     Começar a Ensinar
                   </span>
                 </Button>
@@ -278,7 +278,7 @@ const Index = () => {
                   placeholder="Seu melhor email"
                   className="px-4 py-3 rounded-lg w-full text-black"
                 />
-                <Button className="bg-brand-yellow text-black hover:bg-brand-yellow/90 whitespace-nowrap">
+                <Button variant="primary" className="font-medium whitespace-nowrap">
                   Inscrever-se
                 </Button>
               </div>
