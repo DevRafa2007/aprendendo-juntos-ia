@@ -329,7 +329,7 @@ const CourseDetail = () => {
                       <span className="text-sm">{enrollmentStatus.progress}%</span>
                     </div>
                   </div>
-                  <Button className="bg-white text-brand-blue hover:bg-white/90 mt-2 md:mt-0">
+                  <Button variant="gradient" className="mt-2 md:mt-0">
                     {enrollmentStatus.completed ? (
                       <>
                         <CheckCircle className="mr-2 h-4 w-4" />
@@ -346,8 +346,8 @@ const CourseDetail = () => {
               </div>
             ) : (
               <Button 
+                variant="gradient"
                 size="lg" 
-                className="bg-white text-brand-blue hover:bg-white/90"
                 onClick={handleEnroll}
               >
                 <BookOpen className="mr-2 h-5 w-5" />

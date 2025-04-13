@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { AlertCircle, FileText, Video, FileCheck, Trash2, Plus, Check, X } from 'lucide-react';
+import { AlertCircle, FileText, Video, FileCheck, Trash2, Plus, Check, X, ChevronUp, ChevronDown } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import VideoUploader from './VideoUploader';
 import DocumentUploader from './DocumentUploader';
@@ -228,57 +228,60 @@ const ContentEditor = ({ content, moduleId, onUpdate, onDelete }: ContentEditorP
   };
 
   return (
-    <Card className="mb-4">
+    <Card className="mb-4 border border-muted hover:border-brand-blue/20 transition-all">
       <CardContent className="pt-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-medium">{content.title || 'Novo conteúdo'}</h3>
           <Button 
-            variant="ghost" 
+            variant="destructive" 
             size="icon"
             onClick={onDelete}
+            className="bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700"
           >
-            <Trash2 className="h-4 w-4 text-destructive" />
+            <Trash2 className="h-4 w-4" />
           </Button>
         </div>
         
         <Tabs defaultValue="basic" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-4">
-            <TabsTrigger value="basic">Informações Básicas</TabsTrigger>
+          <TabsList className="mb-4 bg-muted/50">
+            <TabsTrigger value="basic" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-brand-blue/20 data-[state=active]:to-brand-green/20">Informações Básicas</TabsTrigger>
             {content.type === 'video' && (
-              <TabsTrigger value="video">Vídeo</TabsTrigger>
+              <TabsTrigger value="video" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-brand-blue/20 data-[state=active]:to-brand-green/20">Vídeo</TabsTrigger>
             )}
             {content.type === 'text' && (
-              <TabsTrigger value="text">Conteúdo de Texto</TabsTrigger>
+              <TabsTrigger value="text" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-brand-blue/20 data-[state=active]:to-brand-green/20">Conteúdo de Texto</TabsTrigger>
             )}
             {content.type === 'pdf' && (
-              <TabsTrigger value="document">Documento</TabsTrigger>
+              <TabsTrigger value="document" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-brand-blue/20 data-[state=active]:to-brand-green/20">Documento</TabsTrigger>
             )}
             {content.type === 'quiz' && (
-              <TabsTrigger value="quiz">Perguntas do Quiz</TabsTrigger>
+              <TabsTrigger value="quiz" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-brand-blue/20 data-[state=active]:to-brand-green/20">Perguntas do Quiz</TabsTrigger>
             )}
           </TabsList>
           
-          <TabsContent value="basic" className="space-y-4">
-            <div>
-              <Label htmlFor={`content-title-${content.id}`}>Título*</Label>
-              <Input
-                id={`content-title-${content.id}`}
-                value={localContent.title}
-                onChange={(e) => updateContent({ title: e.target.value })}
-                placeholder="Digite um título para este conteúdo"
-                className="mt-1"
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor={`content-description-${content.id}`}>Descrição</Label>
-              <Textarea
-                id={`content-description-${content.id}`}
-                value={localContent.description || ''}
-                onChange={(e) => updateContent({ description: e.target.value })}
-                placeholder="Descreva brevemente este conteúdo"
-                className="mt-1"
-              />
+          <TabsContent value="basic">
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor={`content-title-${content.id}`} className="font-medium">Título</Label>
+                <Input
+                  id={`content-title-${content.id}`}
+                  value={localContent.title}
+                  onChange={(e) => updateContent({ title: e.target.value })}
+                  className="focus-visible:ring-brand-blue border-2 mt-1"
+                  placeholder="Digite um título para o conteúdo"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor={`content-description-${content.id}`} className="font-medium">Descrição (opcional)</Label>
+                <Textarea
+                  id={`content-description-${content.id}`}
+                  value={localContent.description || ''}
+                  onChange={(e) => updateContent({ description: e.target.value })}
+                  className="focus-visible:ring-brand-blue border-2 mt-1 min-h-[100px]"
+                  placeholder="Descreva brevemente este conteúdo"
+                />
+              </div>
             </div>
           </TabsContent>
           
@@ -596,36 +599,40 @@ export const ModuleEditor = ({ module, onUpdate, onDelete }: ModuleEditorProps) 
   };
   
   return (
-    <Card className="mb-6">
+    <Card className="mb-6 border-2 hover:border-brand-blue/30 transition-all">
       <CardContent className="pt-6">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center">
-            <div>
-              <Label htmlFor={`module-title-${module.id}`}>Título do Módulo</Label>
-              <Input
-                id={`module-title-${module.id}`}
-                value={module.title}
-                onChange={(e) => updateModuleTitle(e.target.value)}
-                className="mt-1"
-              />
-            </div>
+          <div className="w-full max-w-md">
+            <Label htmlFor={`module-title-${module.id}`} className="font-medium text-base">Título do Módulo</Label>
+            <Input
+              id={`module-title-${module.id}`}
+              value={module.title}
+              onChange={(e) => updateModuleTitle(e.target.value)}
+              className="mt-1 border-2 focus-visible:ring-brand-blue"
+              placeholder="Digite o título do módulo"
+            />
           </div>
           
           <Button 
-            variant="ghost" 
+            variant="destructive"
             size="icon"
             onClick={onDelete}
+            className="ml-2 bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700"
           >
-            <Trash2 className="h-4 w-4 text-destructive" />
+            <Trash2 className="h-4 w-4" />
           </Button>
         </div>
         
         <Button
-          variant="outline"
-          className="mb-4"
+          variant={isExpanded ? "default" : "outline"}
+          className={`mb-4 w-full justify-between ${isExpanded ? "bg-gradient-to-r from-brand-blue to-brand-green" : "border-2 border-dashed"}`}
           onClick={() => setIsExpanded(!isExpanded)}
         >
-          {isExpanded ? 'Recolher Conteúdos' : 'Expandir Conteúdos'}
+          <span>{isExpanded ? 'Recolher Conteúdos' : 'Expandir Conteúdos'}</span>
+          {isExpanded ? 
+            <ChevronUp className="h-4 w-4 ml-2" /> : 
+            <ChevronDown className="h-4 w-4 ml-2" />
+          }
         </Button>
         
         {isExpanded && (

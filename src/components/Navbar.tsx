@@ -70,7 +70,7 @@ const Navbar = () => {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-                    <div className="h-9 w-9 rounded-full bg-brand-blue text-white flex items-center justify-center">
+                    <div className="h-9 w-9 rounded-full bg-gradient-to-r from-brand-blue to-brand-green text-white flex items-center justify-center">
                       <User className="h-5 w-5" />
                     </div>
                   </Button>
@@ -105,7 +105,7 @@ const Navbar = () => {
                 </Button>
               </Link>
               <Link to="/cadastro">
-                <Button className="bg-brand-blue hover:bg-brand-blue/90">Cadastrar</Button>
+                <Button variant="gradient" className="flex items-center gap-2">Cadastrar</Button>
               </Link>
             </div>
           )}
