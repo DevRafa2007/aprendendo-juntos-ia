@@ -226,8 +226,10 @@ const Index = () => {
               <h2 className="text-2xl md:text-3xl font-bold mb-4">Compartilhe seu conhecimento</h2>
               <p className="text-lg mb-6">Crie seu curso e alcance estudantes de todo o Brasil. Defina seu próprio preço e comece a ensinar!</p>
               <Link to="/criar-curso">
-                <Button size="lg" className="bg-white text-brand-blue hover:bg-white/90">
-                  Começar a Ensinar
+                <Button size="lg" className="bg-white hover:bg-white/95 shadow-md">
+                  <span className="bg-gradient-to-r from-brand-blue to-brand-green bg-clip-text text-transparent font-semibold">
+                    Começar a Ensinar
+                  </span>
                 </Button>
               </Link>
             </div>

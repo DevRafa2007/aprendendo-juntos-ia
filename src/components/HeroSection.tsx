@@ -17,14 +17,18 @@ const HeroSection = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Link to="/cursos">
-                <Button size="lg" className="bg-white text-brand-blue hover:bg-white/90">
-                  Explorar Cursos
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                <Button size="lg" className="bg-white hover:bg-white/95 shadow-md">
+                  <span className="bg-gradient-to-r from-brand-blue to-brand-green bg-clip-text text-transparent font-semibold">
+                    Explorar Cursos
+                  </span>
+                  <ArrowRight className="ml-2 h-5 w-5 text-brand-blue" />
                 </Button>
               </Link>
               <Link to="/criar-curso">
-                <Button size="lg" className="text-white border border-white hover:bg-white/10 bg-transparent">
-                  Criar um Curso
+                <Button size="lg" className="bg-white hover:bg-white/95 shadow-md">
+                  <span className="bg-gradient-to-r from-brand-blue to-brand-green bg-clip-text text-transparent font-semibold">
+                    Criar um Curso
+                  </span>
                 </Button>
               </Link>
             </div>
@@ -42,11 +46,31 @@ const HeroSection = () => {
               </div>
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
-              <Button variant="ghost" className="bg-white/20 hover:bg-white/30 text-white text-sm">Tecnologia</Button>
-              <Button variant="ghost" className="bg-white/20 hover:bg-white/30 text-white text-sm">Negócios</Button>
-              <Button variant="ghost" className="bg-white/20 hover:bg-white/30 text-white text-sm">Criatividade</Button>
-              <Button variant="ghost" className="bg-white/20 hover:bg-white/30 text-white text-sm">Marketing</Button>
-              <Button variant="ghost" className="bg-white/20 hover:bg-white/30 text-white text-sm">Educação</Button>
+              <Button variant="ghost" className="bg-white hover:bg-white/95 shadow-sm">
+                <span className="bg-gradient-to-r from-brand-blue to-brand-green bg-clip-text text-transparent font-medium">
+                  Tecnologia
+                </span>
+              </Button>
+              <Button variant="ghost" className="bg-white hover:bg-white/95 shadow-sm">
+                <span className="bg-gradient-to-r from-brand-blue to-brand-green bg-clip-text text-transparent font-medium">
+                  Negócios
+                </span>
+              </Button>
+              <Button variant="ghost" className="bg-white hover:bg-white/95 shadow-sm">
+                <span className="bg-gradient-to-r from-brand-blue to-brand-green bg-clip-text text-transparent font-medium">
+                  Criatividade
+                </span>
+              </Button>
+              <Button variant="ghost" className="bg-white hover:bg-white/95 shadow-sm">
+                <span className="bg-gradient-to-r from-brand-blue to-brand-green bg-clip-text text-transparent font-medium">
+                  Marketing
+                </span>
+              </Button>
+              <Button variant="ghost" className="bg-white hover:bg-white/95 shadow-sm">
+                <span className="bg-gradient-to-r from-brand-blue to-brand-green bg-clip-text text-transparent font-medium">
+                  Educação
+                </span>
+              </Button>
             </div>
           </div>
         </div>
