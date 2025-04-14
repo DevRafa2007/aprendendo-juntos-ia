@@ -348,10 +348,12 @@ const CourseDetail = () => {
               <Button 
                 variant="gradient"
                 size="lg" 
-                onClick={handleEnroll}
+                onClick={() => navigate(`/checkout/${courseId}`)}
               >
                 <BookOpen className="mr-2 h-5 w-5" />
-                Inscrever-se neste Curso
+                {course.price > 0 
+                  ? `Matricular-se por R$ ${course.price.toFixed(2)}` 
+                  : 'Matricular-se gratuitamente'}
               </Button>
             )}
           </div>
@@ -620,9 +622,11 @@ const CourseDetail = () => {
                         )}
                       </Button>
                     ) : (
-                      <Button className="w-full" onClick={handleEnroll}>
+                      <Button className="w-full" onClick={() => navigate(`/checkout/${courseId}`)}>
                         <BookOpen className="mr-2 h-4 w-4" />
-                        Inscrever-se
+                        {course.price > 0 
+                          ? `Matricular-se por R$ ${course.price.toFixed(2)}` 
+                          : 'Matricular-se gratuitamente'}
                       </Button>
                     )}
                     

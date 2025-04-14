@@ -72,6 +72,13 @@ const Profile = () => {
     completionReminders: true,
   });
   
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  
   useEffect(() => {
     if (profile) {
       setEditName(profile.name || '');
@@ -156,6 +163,33 @@ const Profile = () => {
     fetchUserData();
   }, [user, toast]);
   
+  useEffect(() => {
+    const fetchNotificationSettings = async () => {
+      if (!user) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('user_preferences')
+          .select('notification_settings')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (error) {
+          console.error('Erro ao buscar preferências:', error);
+          return;
+        }
+        
+        if (data && data.notification_settings) {
+          setNotificationSettings(data.notification_settings);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar preferências:', error);
+      }
+    };
+    
+    fetchNotificationSettings();
+  }, [user]);
+  
   const handleSaveProfile = async () => {
     try {
       setIsUpdating(true);
@@ -232,6 +266,125 @@ const Profile = () => {
     coursesInProgress: inProgressCourses.length,
     coursesCompleted: completedCourses.length,
     certificateCount: certificates.length,
+  };
+
+  const saveNotificationSettings = async () => {
+    if (!user) return;
+    
+    try {
+      setIsUpdating(true);
+      
+      const { error } = await supabase
+        .from('user_preferences')
+        .upsert({
+          user_id: user.id,
+          notification_settings: notificationSettings,
+          updated_at: new Date().toISOString()
+        });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Preferências salvas",
+        description: "Suas preferências de notificação foram atualizadas com sucesso!"
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao salvar preferências",
+        description: error.message
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handlePasswordChange = async () => {
+    if (!user) return;
+    
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordError('As senhas não coincidem');
+      return;
+    }
+    
+    if (passwordData.newPassword.length < 6) {
+      setPasswordError('A nova senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+    
+    try {
+      setIsUpdating(true);
+      setPasswordError(null);
+      
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email || '',
+        password: passwordData.currentPassword,
+      });
+      
+      if (signInError) {
+        setPasswordError('Senha atual incorreta');
+        throw signInError;
+      }
+      
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: passwordData.newPassword
+      });
+      
+      if (updateError) throw updateError;
+      
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+      
+      toast({
+        title: "Senha atualizada",
+        description: "Sua senha foi atualizada com sucesso!"
+      });
+    } catch (error: any) {
+      if (!passwordError) {
+        toast({
+          variant: "destructive",
+          title: "Erro ao atualizar senha",
+          description: error.message
+        });
+      }
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const setupTwoFactorAuth = async () => {
+    toast({
+      title: "Em desenvolvimento",
+      description: "A verificação em duas etapas estará disponível em breve."
+    });
+  };
+
+  const logoutAllSessions = async () => {
+    try {
+      setIsUpdating(true);
+      
+      const { error } = await supabase.auth.signOut({ scope: 'global' });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Sessões encerradas",
+        description: "Todas as suas sessões foram encerradas. Você precisará fazer login novamente."
+      });
+      
+      window.location.href = '/auth';
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao encerrar sessões",
+        description: error.message
+      });
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   if (profileLoading) {
@@ -641,7 +794,6 @@ const Profile = () => {
                     <TabsList className="mb-6">
                       <TabsTrigger value="perfil">Perfil</TabsTrigger>
                       <TabsTrigger value="notificacoes">Notificações</TabsTrigger>
-                      <TabsTrigger value="pagamento">Pagamento</TabsTrigger>
                       <TabsTrigger value="seguranca">Segurança</TabsTrigger>
                     </TabsList>
                     
@@ -761,7 +913,12 @@ const Profile = () => {
                                   Receba notificações quando seus cursos forem atualizados
                                 </p>
                               </div>
-                              <Switch checked={notificationSettings.courseUpdates} />
+                              <Switch 
+                                checked={notificationSettings.courseUpdates} 
+                                onCheckedChange={(checked) => 
+                                  setNotificationSettings(prev => ({...prev, courseUpdates: checked}))
+                                }
+                              />
                             </div>
                             <div className="flex items-center justify-between">
                               <div>
@@ -770,7 +927,12 @@ const Profile = () => {
                                   Notificações de mensagens de instrutores e alunos
                                 </p>
                               </div>
-                              <Switch checked={notificationSettings.newMessages} />
+                              <Switch 
+                                checked={notificationSettings.newMessages} 
+                                onCheckedChange={(checked) => 
+                                  setNotificationSettings(prev => ({...prev, newMessages: checked}))
+                                }
+                              />
                             </div>
                             <div className="flex items-center justify-between">
                               <div>
@@ -779,7 +941,12 @@ const Profile = () => {
                                   Receba ofertas especiais e descontos em cursos
                                 </p>
                               </div>
-                              <Switch checked={notificationSettings.promotions} />
+                              <Switch 
+                                checked={notificationSettings.promotions} 
+                                onCheckedChange={(checked) => 
+                                  setNotificationSettings(prev => ({...prev, promotions: checked}))
+                                }
+                              />
                             </div>
                             <div className="flex items-center justify-between">
                               <div>
@@ -788,7 +955,12 @@ const Profile = () => {
                                   Atualizações semanais sobre novos cursos e recursos
                                 </p>
                               </div>
-                              <Switch checked={notificationSettings.newsletter} />
+                              <Switch 
+                                checked={notificationSettings.newsletter} 
+                                onCheckedChange={(checked) => 
+                                  setNotificationSettings(prev => ({...prev, newsletter: checked}))
+                                }
+                              />
                             </div>
                             <div className="flex items-center justify-between">
                               <div>
@@ -797,81 +969,27 @@ const Profile = () => {
                                   Receba lembretes para completar seus cursos
                                 </p>
                               </div>
-                              <Switch checked={notificationSettings.completionReminders} />
+                              <Switch 
+                                checked={notificationSettings.completionReminders} 
+                                onCheckedChange={(checked) => 
+                                  setNotificationSettings(prev => ({...prev, completionReminders: checked}))
+                                }
+                              />
                             </div>
                           </div>
                           
-                          <Button className="mt-6">Salvar Preferências</Button>
-                        </CardContent>
-                      </Card>
-                    </TabsContent>
-                    
-                    <TabsContent value="pagamento">
-                      <Card>
-                        <CardContent className="pt-6">
-                          <h3 className="text-lg font-medium mb-4">Métodos de Pagamento</h3>
-                          
-                          <div className="space-y-4 mb-6">
-                            <div className="border rounded-md p-4 flex justify-between items-center">
-                              <div className="flex items-center gap-3">
-                                <div className="bg-muted p-2 rounded-md">
-                                  <CreditCard className="h-6 w-6" />
-                                </div>
-                                <div>
-                                  <p className="font-medium">Cartão de Crédito</p>
-                                  <p className="text-sm text-muted-foreground">
-                                    •••• •••• •••• 4242 - Expira 12/25
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Button variant="ghost" size="sm">Editar</Button>
-                                <Button variant="ghost" size="sm" className="text-destructive">
-                                  Remover
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <Button>
-                            <PlusCircle className="h-4 w-4 mr-2" />
-                            Adicionar Método de Pagamento
+                          <Button 
+                            className="mt-6" 
+                            onClick={saveNotificationSettings}
+                            disabled={isUpdating}
+                          >
+                            {isUpdating ? (
+                              <>
+                                <Loader className="h-4 w-4 mr-2 animate-spin" />
+                                Salvando...
+                              </>
+                            ) : "Salvar Preferências"}
                           </Button>
-                          
-                          <div className="mt-8 pt-6 border-t">
-                            <h3 className="text-lg font-medium mb-4">Histórico de Compras</h3>
-                            
-                            <div className="space-y-2">
-                              <div className="flex justify-between items-center p-3 bg-muted rounded-md">
-                                <div>
-                                  <p className="font-medium">React e TypeScript: desenvolvendo uma aplicação completa</p>
-                                  <p className="text-sm text-muted-foreground">15/03/2024</p>
-                                </div>
-                                <div className="text-right">
-                                  <p className="font-medium">R$ 149,99</p>
-                                  <Button variant="link" size="sm" className="h-auto p-0">
-                                    Ver Recibo
-                                  </Button>
-                                </div>
-                              </div>
-                              <div className="flex justify-between items-center p-3 bg-muted rounded-md">
-                                <div>
-                                  <p className="font-medium">Marketing Digital Avançado: Estratégias de Conversão</p>
-                                  <p className="text-sm text-muted-foreground">20/02/2024</p>
-                                </div>
-                                <div className="text-right">
-                                  <p className="font-medium">R$ 289,90</p>
-                                  <Button variant="link" size="sm" className="h-auto p-0">
-                                    Ver Recibo
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <Button variant="outline" className="mt-4 w-full">
-                              Ver Histórico Completo
-                            </Button>
-                          </div>
                         </CardContent>
                       </Card>
                     </TabsContent>
@@ -885,17 +1003,45 @@ const Profile = () => {
                               <div className="space-y-4">
                                 <div className="space-y-2">
                                   <Label htmlFor="current-password">Senha atual</Label>
-                                  <Input id="current-password" type="password" />
+                                  <Input 
+                                    id="current-password" 
+                                    type="password" 
+                                    value={passwordData.currentPassword}
+                                    onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
+                                  />
                                 </div>
                                 <div className="space-y-2">
                                   <Label htmlFor="new-password">Nova senha</Label>
-                                  <Input id="new-password" type="password" />
+                                  <Input 
+                                    id="new-password" 
+                                    type="password" 
+                                    value={passwordData.newPassword}
+                                    onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
+                                  />
                                 </div>
                                 <div className="space-y-2">
                                   <Label htmlFor="confirm-password">Confirmar nova senha</Label>
-                                  <Input id="confirm-password" type="password" />
+                                  <Input 
+                                    id="confirm-password" 
+                                    type="password" 
+                                    value={passwordData.confirmPassword}
+                                    onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
+                                  />
+                                  {passwordError && (
+                                    <p className="text-sm text-destructive mt-1">{passwordError}</p>
+                                  )}
                                 </div>
-                                <Button>Atualizar Senha</Button>
+                                <Button 
+                                  onClick={handlePasswordChange}
+                                  disabled={isUpdating}
+                                >
+                                  {isUpdating ? (
+                                    <>
+                                      <Loader className="h-4 w-4 mr-2 animate-spin" />
+                                      Atualizando...
+                                    </>
+                                  ) : "Atualizar Senha"}
+                                </Button>
                               </div>
                             </div>
                             
@@ -904,7 +1050,7 @@ const Profile = () => {
                               <p className="text-muted-foreground mb-4">
                                 Adicione uma camada extra de segurança à sua conta com a verificação em duas etapas.
                               </p>
-                              <Button>Configurar Verificação em Duas Etapas</Button>
+                              <Button onClick={setupTwoFactorAuth}>Configurar Verificação em Duas Etapas</Button>
                             </div>
                             
                             <div className="pt-6 border-t">
@@ -942,18 +1088,18 @@ const Profile = () => {
                                 </div>
                               </div>
                               
-                              <Button variant="outline" className="mt-4">
-                                Encerrar Todas as Sessões
-                              </Button>
-                            </div>
-                            
-                            <div className="pt-6 border-t">
-                              <h3 className="text-lg font-medium mb-4 text-destructive">Zona de Perigo</h3>
-                              <p className="text-muted-foreground mb-4">
-                                Cuidado! As ações abaixo são irreversíveis.
-                              </p>
-                              <Button variant="destructive">
-                                Excluir Minha Conta
+                              <Button 
+                                variant="outline" 
+                                className="mt-4"
+                                onClick={logoutAllSessions}
+                                disabled={isUpdating}
+                              >
+                                {isUpdating ? (
+                                  <>
+                                    <Loader className="h-4 w-4 mr-2 animate-spin" />
+                                    Encerrando...
+                                  </>
+                                ) : "Encerrar Todas as Sessões"}
                               </Button>
                             </div>
                           </div>

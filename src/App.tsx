@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -18,6 +17,7 @@ import Profile from "./pages/Profile";
 import Support from "./pages/Support";
 import NotFound from "./pages/NotFound";
 import TestUploader from "./pages/test-uploader";
+import Checkout from "./pages/Checkout";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +57,11 @@ const App = () => (
               <Route path="/criar-curso" element={
                 <AuthGuard requireAuth redirectTo="/login">
                   <CreateCourse />
+                </AuthGuard>
+              } />
+              <Route path="/checkout/:courseId" element={
+                <AuthGuard requireAuth redirectTo="/login">
+                  <Checkout />
                 </AuthGuard>
               } />
               <Route path="/login" element={
