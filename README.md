@@ -1,156 +1,97 @@
-# Welcome to your Lovable project
+# 📚 Aprendendo Juntos - Plataforma de Cursos
 
-## Project info
+> ⚠️ **AVISO IMPORTANTE**: Este projeto foi descontinuado e atualmente está sem conexão com banco de dados.
 
-**URL**: https://lovable.dev/projects/2a474830-a7e0-4871-a2b7-02622c64228b
+## 🎯 Sobre o Projeto
 
-## How can I edit this code?
+Aprendendo Juntos é uma plataforma de cursos online desenvolvida com tecnologias modernas, focada em proporcionar uma experiência de aprendizado interativa e envolvente. O projeto foi criado como uma demonstração de arquitetura moderna de frontend e boas práticas de desenvolvimento.
 
-There are several ways of editing your application.
+## 🚀 Tecnologias Utilizadas
 
-**Use Lovable**
+- **React** - Biblioteca para construção de interfaces
+- **TypeScript** - Superset JavaScript com tipagem estática
+- **Vite** - Build tool e bundler moderno
+- **Tailwind CSS** - Framework CSS utility-first
+- **shadcn/ui** - Componentes de UI reutilizáveis
+- **Supabase** - (Desativado) Anteriormente usado para backend
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/2a474830-a7e0-4871-a2b7-02622c64228b) and start prompting.
+## ✨ Funcionalidades Principais
 
-Changes made via Lovable will be committed automatically to this repo.
+- 🎓 Sistema de cursos online
+- 👤 Interface de perfil do usuário
+- 📝 Editor de conteúdo
+- 🎯 Sistema de progresso do aluno
+- ⭐ Sistema de avaliações
+- 💳 Integração com pagamentos (Stripe)
 
-**Use your preferred IDE**
+## 🛠️ Configuração do Ambiente de Desenvolvimento
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Pré-requisitos
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- Node.js (versão 16 ou superior)
+- npm ou yarn
 
-Follow these steps:
+### Instalação
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+1. Clone o repositório:
+```bash
+git clone https://github.com/DevRafa2007/aprendendo-juntos-ia.git
+```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+2. Entre no diretório do projeto:
+```bash
+cd aprendendo-juntos-ia
+```
 
-# Step 3: Install the necessary dependencies.
-npm i
+3. Instale as dependências:
+```bash
+npm install
+# ou
+yarn install
+```
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+4. Inicie o servidor de desenvolvimento:
+```bash
 npm run dev
+# ou
+yarn dev
 ```
 
-**Edit a file directly in GitHub**
+## ⚠️ Status do Projeto
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Este projeto está atualmente **descontinuado** e sem conexão com banco de dados. Foi mantido como referência de arquitetura e implementação de features modernas em React/TypeScript.
 
-**Use GitHub Codespaces**
+### Limitações Atuais:
+- Sem persistência de dados
+- Funcionalidades de autenticação desativadas
+- Sistema de pagamentos em modo demonstração
+- Upload de arquivos desativado
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## 📝 Notas para Desenvolvedores
 
-## What technologies are used for this project?
+- O código fonte está documentado e pode servir como referência para implementações similares
+- A estrutura do projeto segue as melhores práticas de organização de código React
+- Componentes são modulares e reutilizáveis
+- Implementação de features modernas como hooks customizados e context API
 
-This project is built with:
+## 🤝 Como Contribuir
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Embora o projeto esteja descontinuado, você pode:
 
-## How can I deploy this project?
+1. Fazer um fork do projeto
+2. Criar uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
+3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
+4. Push para a branch (`git push origin feature/AmazingFeature`)
+5. Abra um Pull Request
 
-Simply open [Lovable](https://lovable.dev/projects/2a474830-a7e0-4871-a2b7-02622c64228b) and click on Share -> Publish.
+## 📄 Licença
 
-## Can I connect a custom domain to my Lovable project?
+Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
 
-Yes it is!
+## 👤 Autor
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+DevRafa2007
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+---
 
-# Aprendendo Juntos - Plataforma de Cursos
-
-## Configuração do Firebase
-
-Este projeto utiliza o Firebase para armazenamento de arquivos, autenticação e banco de dados. Para configurar o Firebase, siga os passos abaixo:
-
-### 1. Configuração de Variáveis de Ambiente
-
-O projeto já está configurado com o Firebase. As variáveis de ambiente necessárias estão no arquivo `.env`:
-
-```
-VITE_FIREBASE_API_KEY=AIzaSyCH3znpWLYiSaNZClwHK_aaK75CEVBM1xA
-VITE_FIREBASE_AUTH_DOMAIN=studying-place-df051.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=studying-place-df051
-VITE_FIREBASE_STORAGE_BUCKET=studying-place-df051.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=444244328352
-VITE_FIREBASE_APP_ID=1:444244328352:web:70c954ff79bc5751142ec5
-VITE_FIREBASE_MEASUREMENT_ID=G-VB1QE59GHF
-```
-
-### 2. Configuração do Firebase Storage
-
-Para que o upload de arquivos funcione corretamente, você precisa configurar o Firebase Storage:
-
-1. Acesse o [Console do Firebase](https://console.firebase.google.com/)
-2. Navegue até seu projeto: "studying-place-df051"
-3. Selecione "Storage" no menu lateral
-4. Clique em "Começar" ou "Get Started" se for a primeira vez
-5. Escolha uma região próxima aos seus usuários (por exemplo, us-central1)
-6. Configure as regras de segurança para permitir acesso:
-
-```
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    match /{allPaths=**} {
-      allow read, write: if request.auth != null || request.origin == "http://localhost:8080";
-    }
-  }
-}
-```
-
-⚠️ **Importante**: A regra acima permite acesso no ambiente de desenvolvimento. Em produção, você deve modificar para permitir apenas usuários autenticados:
-
-```
-allow read, write: if request.auth != null;
-```
-
-### 3. Buckets Necessários
-
-O sistema usa os seguintes buckets no Firebase Storage:
-
-- `course-images`: para imagens de cursos e avatares
-- `course-videos`: para vídeos de aulas
-- `course-documents`: para documentos e PDFs
-
-Eles são criados automaticamente quando você faz o primeiro upload.
-
-## Desenvolvimento Local
-
-Para iniciar o servidor de desenvolvimento:
-
-```
-npm run dev
-```
-
-## Construção para Produção
-
-Para construir o projeto para produção:
-
-```
-npm run build
-```
-
-## Tecnologias Utilizadas
-
-- Vite + React
-- TypeScript
-- Firebase (Storage, Auth)
-- Supabase (Auth, Database)
-- Chakra UI / Shadcn UI
-- TailwindCSS
+⭐️ Se este projeto te ajudou de alguma forma, considere dar uma estrela no GitHub!
